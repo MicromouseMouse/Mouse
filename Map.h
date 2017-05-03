@@ -11,8 +11,8 @@
 
 using namespace std;
 
-const unsigned short SIZE = 16;
-const double CELL = 16.75;
+const unsigned short SIZE = 6;
+const double CELL = 18;
 
 enum Dir {
 	NORTH = 0,

@@ -1,4 +1,5 @@
 
+
 #include "Maze.h"
 #include "Map.h"
 #include <Bounce\Bounce.h>
@@ -8,12 +9,15 @@
 #include "Led.h"
 #include <stddef.h>
 #include <SoftwareSerial.h>
+
+using namespace std;
 elapsedMicros time;  // timer for pid to calculate dt
 elapsedMicros control;  // timer to reset flag
-
+elapsedMicros mapLoop;
 bool ledFlag = true;
 bool PIDFlag = true;
 bool slowFlag = false;
+const int MIN_SPEED = 85;
 
 volatile bool modeLeft = false;
 volatile bool modeRight = false;
@@ -24,12 +28,14 @@ const int baseSpeed = 200;
 LedClass led;
 MovementClass move(baseSpeed);
 PIDClass pid(&move, &led, time);
+MazeClass maze(&led, &move);
 SoftwareSerial bluetooth(7, 8);
 
-const int frontWallThreshold = 23000;
+const int frontWallThreshold = 25000;
 void testLed();
 void testEncoder();
 void testMotor();
+void testStraight(const PID_MODE& A, char m);
 
 void setup()
 {
@@ -37,166 +43,84 @@ void setup()
 	bluetooth.begin(9600);
 	
 	led.init();
-	//move.goForward();
+	
 	move.resetEncoder();
 	control = 0;
 	time = 0;
+	//move.goForward();
 }
 
 void loop()
 {
 	//testLed();
+	//testEncoder();
 	testMotor();
-	char command;
-	int a = analogRead(14);
-	if (a > 50000) modeLeft = true;
-	else modeLeft = false;
+	//testStraight(ENCODER_MODE,'a');
 	
-	/* mode adjust
-	int b = digitalRead(13);   // one use only no pull down resistor
-	if (n == HIGH) modeRight = true;
-	else modeRight = false;
-	*/
-	double distance = move.left_encoder.read() + move.right_encoder.read();
-	distance = distance * 0.5 * WHEEL_CIRCUMFERENCE / 5760.0;
-
-	if (bluetooth.available())
-	{
-		command = (char)bluetooth.read();
-	}
-	switch (command)
-	{
-	case 'm':
-		/*
-		int kp = (int)bluetooth.read();
-		int kd = (int)bluetooth.read();
-		pid.Kp_led = kp;
-		pid.Kd_led = kd;
-		break;
-		*/
-	case 'o':
-		move.left_encoder.write(0);
-		move.right_encoder.write(0);
-		move.goForward();
-
-		while (distance < 17.9)
-		{
-			pid.PID(ENCODER_MODE);
-			distance = move.left_encoder.read() + move.right_encoder.read();
-			distance = distance * 0.5 * WHEEL_CIRCUMFERENCE / 5760.0;
-		}
-		move.stop();
-		break;
-	case 'g':
-		move.goForward();
-		break;
-	case 'r':
-		move.turn_encoder(RIGHT);
-		break;
-	case 'l':
-		move.turn_encoder(LEFT);
-		break;
-	case 's':
-		move.stop();
-		break;
-	case 't':
-		bluetooth.print(pid.Kp_led,3);
-		bluetooth.print(" ");
-		bluetooth.print(pid.Kd_led, 3);
-		bluetooth.println(" ");
-		bluetooth.println(distance, 5);
-		bluetooth.print(move.left_encoder.read(), DEC);
-		bluetooth.print(" ");
-		bluetooth.println(move.right_encoder.read(), DEC);
-	default:
-		break;
-	}
 
 }
+
 void store()
 {
-	//else
+	int count = 0;
+	while (true)
 	{
-		double distance = move.left_encoder.read() + move.right_encoder.read();
-		distance = distance * 0.5 * WHEEL_CIRCUMFERENCE / 5760.0;
-		bluetooth.println(distance, 5);
-		bluetooth.print(move.left_encoder.read(), DEC);
-		bluetooth.print(" ");
-		bluetooth.println(move.right_encoder.read(), DEC);
-		//testLed();
-
-		//testGyro();
-		//testMotor();
-		//testEncoder();
-
-		//else
+		//bluetooth.println(move.getDistanceTravel(),3);
+		//bluetooth.println(maze.curDistance, 3);
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold)
 		{
-			unsigned int count = 0;
-			if (count < control % 100)
+			move.stop();
+			maze.updateMap();
+			move.baseSpeed = baseSpeed;
+			slowFlag = false;
+			//bluetooth.print(maze.printMap());
+			//delay(2000);
+			if (led.getLed(LEFT_DIAGONAL) < 7000)
 			{
-				count = control % 100;
-				ledFlag = true;
+				move.turn_encoder(LEFT);
+				led.measure(ledTime);
+				move.goForward();
+				delay(100);
 			}
-			if (control > 1000)           // reset flag
+			else if (led.getLed(RIGHT_DIAGONAL) < 6000)
 			{
-				//Serial.println("in control");
-				//ledFlag = true;
-				PIDFlag = true;
-				control = 0;
-				count = 0;
+				move.turn_encoder(RIGHT);
+				led.measure(ledTime);
+				move.goForward();
+				delay(100);
 			}
-			/*
-			// Minh's version
-			double factor =  (20000 - led.getLed(LEFT_REAR) - led.getLed(RIGHT_REAR) )*1.0  / (1.0*(20000 - led.frontThreshold));
-			move.baseSpeed = (baseSpeed - 85)*factor + 85;
-			*/
+			else;
+			break;
+		}
 
-			volatile int front = led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR);
+		else if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold && !slowFlag)
+		{
+			slowFlag = true;
+			move.slow(move.minSpeed);
+		}
 
-			if (ledFlag)
-			{
-				ledFlag = false;
-				led.measure(ledTime); 
-				// time in microsecond
-				/*
-				Serial.print(led.left_diagonal, DEC);
-				Serial.print(" ");
-				Serial.print(led.right_diagonal, DEC);
-				Serial.print(" ");
-				Serial.print(led.leftThreshold, DEC);
-				Serial.print(" ");
-				Serial.print(led.rightThreshold, DEC);
-				Serial.println(" ");
-				*/
-			}
-			if (PIDFlag)
-			{
-				PIDFlag = false;
-				//pid.PID(LED_MODE);
-				pid.PID(ENCODER_MODE);
-				/*Serial.println("");
-				Serial.print(move.currentSpeedLeft, DEC);
-				Serial.print(" ");
-				Serial.print(move.currentSpeedRight, DEC);
-				Serial.println("");
-				*/
-			}
+		maze.mapping();
 
-			if (front > led.frontThreshold && !slowFlag)
-			{
-				slowFlag = true;
-				move.slow(100);
-				move.baseSpeed = 100;
-			}
+		if (control > 1000)
+		{
+			ledFlag = true;
+			PIDFlag = true;
+			control = 0;
+		}
 
-			if (front > frontWallThreshold)
-			{
-				move.stop();
-			}
+		if (ledFlag)
+		{
+			led.measure(ledTime);
+			ledFlag = false;
+		}
+
+		if (PIDFlag)
+		{
+			pid.PID(LED_MODE);
+			PIDFlag = false;
 		}
 
 	}
-
 }
 
 void testLed()
@@ -205,7 +129,7 @@ void testLed()
 
 	{
 		led.measure(ledTime);
-
+		/*
 		Serial.print("");
 		Serial.print(led.getLed(LEFT_REAR), DEC);
 		Serial.print("  ");
@@ -219,8 +143,8 @@ void testLed()
 		Serial.print("  ");
 		Serial.print(led.getLed(RIGHT_REAR), DEC);
 		Serial.println("\n");
+		*/
 
-		/*
 		bluetooth.println("test");
 		bluetooth.print("");
 		bluetooth.println(led.getLed(LEFT_REAR));//, DEC);
@@ -236,7 +160,7 @@ void testLed()
 		bluetooth.print(led.getLed(RIGHT_REAR));//, DEC);
 		bluetooth.println("\n");
 		delay(500);
-		*/
+
 		//bluetooth.println("test");
 		delay(100);
 
@@ -244,45 +168,91 @@ void testLed()
 }
 
 void testMotor()
+{
+	while (true)
 	{
-		while (true)
-		{
-			//move.goForward();
-			//printf("%d   %d\n", move.getCurrentSpeed(LEFT), move.getCurrentSpeed(RIGHT));
+		//move.goForward();
+		//printf("%d   %d\n", move.getCurrentSpeed(LEFT), move.getCurrentSpeed(RIGHT));
 
-			delay(2000);
-			move.turn_encoder(LEFT);
+		//delay(2000);
+		//move.turn_encoder(LEFT);
 
-			delay(2000);
-			move.turn_encoder(RIGHT);
+		delay(2000);
+		move.turn_encoder(RIGHT);
 
-			delay(2000);
-			move.turn_encoder(BACK);
+		//delay(2000);
+		//move.turn_encoder(BACK);
 
 
-		}
 	}
+}
 
 void testEncoder()
+{
+	long positionLeft = -999;
+	long positionRight = -999;
+
+	while (true)
 	{
-		long positionLeft = -999;
-		long positionRight = -999;
+		bluetooth.println("test");
+		long newLeft, newRight;
+		newLeft = move.getEncoderReading(LEFT);
+		newRight = move.getEncoderReading(RIGHT);
+		if (newLeft != positionLeft || newRight != positionRight) {
+			Serial.print("Left = ");
+			Serial.print(newLeft);
+			Serial.print(", Right = ");
+			Serial.print(newRight);
+			Serial.println();
+			positionLeft = newLeft;
+			positionRight = newRight;
+		}
 
-		while (true)
+	}
+}
+
+void testStraight(const PID_MODE& A, char m)
+{
+	while (true)
+	{
+		switch (m)
 		{
-			bluetooth.println("test");
-			long newLeft, newRight;
-			newLeft = move.getEncoderReading(LEFT);
-			newRight = move.getEncoderReading(RIGHT);
-			if (newLeft != positionLeft || newRight != positionRight) {
-				Serial.print("Left = ");
-				Serial.print(newLeft);
-				Serial.print(", Right = ");
-				Serial.print(newRight);
-				Serial.println();
-				positionLeft = newLeft;
-				positionRight = newRight;
-			}
+		case 'b':
+			bluetooth.print("Left = ");
+			bluetooth.print(move.left_encoder.read());
+			bluetooth.print(", Right = ");
+			bluetooth.println(move.right_encoder.read());
+			break;
+		default:
+			Serial.print("Left = ");
+			Serial.print(move.left_encoder.read());
+			Serial.print(", Right = ");
+			Serial.println(move.right_encoder.read());
+			break;
+		}
+		
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold)
+		{
+		move.stop();
+		break;
+		}
+		if (control > 1000)
+		{
+			ledFlag = true;
+			PIDFlag = true;
+			control = 0;
+		}
 
+		if (ledFlag)
+		{
+			led.measure(ledTime);
+			ledFlag = false;
+		}
+
+		if (PIDFlag)
+		{
+			pid.PID(A);
+			PIDFlag = false;
 		}
 	}
+}

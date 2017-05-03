@@ -34,7 +34,7 @@ void LedClass::init()
 	measure(1000);
 	leftThreshold = left_diagonal ;
 	rightThreshold = right_diagonal ;
-	frontThreshold = left_rear + right_rear + 650;
+	frontThreshold = left_rear + right_rear + 1000;
 	offsetLed = left_diagonal - right_diagonal;
 }
 
@@ -93,10 +93,10 @@ void LedClass::measure(const unsigned int &time)
 
 	digitalWrite(MIDDLE_LED, LOW);
 
-	if (left_diagonal <= WALL_SIDE) wallLeft = false;
+	if (left_diagonal <= WALL_LEFT) wallLeft = false;
 	else wallLeft = true;
 
-	if (right_diagonal <= WALL_SIDE) wallRight = false;
+	if (right_diagonal <= WALL_RIGHT) wallRight = false;
 	else wallRight = true;
 
 	if ((left_rear + right_rear) <= WALL_FRONT) wallFront = false;

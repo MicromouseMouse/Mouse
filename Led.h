@@ -20,7 +20,8 @@ const uint8_t RIGHT_MIDDLE_RECEIVER = 19;
 const uint8_t RIGHT_DIAGONAL_RECEIVER = 18;
 const uint8_t RIGHT_REAR_RECEIVER = 17;
 
-const int WALL_SIDE = 5000;
+const int WALL_LEFT = 7000;
+const int WALL_RIGHT = 6000;
 const int WALL_FRONT = 15000;
 
 enum Wall{W_LEFT,W_RIGHT,W_FRONT};

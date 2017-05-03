@@ -19,7 +19,10 @@ MovementClass::MovementClass(const int& base) :left_encoder(LEFT_ENCODER_1, LEFT
 	currentSpeedLeft = base;
 	currentSpeedRight = base;
 	baseSpeed = base;
-
+	distance = 0;
+	travel = 0;
+	minSpeed = 120;
+	slowFlag = false;
 	pinMode(GYRO, INPUT);
 }
 
@@ -37,7 +40,7 @@ long MovementClass::getEncoderReading(const Turn& side)
 
 float MovementClass::getDistanceTravel()   // get total distance travel
 {
-	float distance = (left_encoder.read() + right_encoder.read()) / 2.0 * WHEEL_CIRCUMFERENCE / 5760.0;
+	distance = (left_encoder.read() + right_encoder.read()) / 2.0 * WHEEL_CIRCUMFERENCE / 5760.0 * 31/29.0;
 	return distance;
 }
 
@@ -54,15 +57,33 @@ void MovementClass::goForward(const int & left, const int & right)  // go forwar
 void MovementClass::goForward() // go forward at base speed
 {
 	analogWrite(LEFT_FORWARD, baseSpeed);
-	analogWrite(RIGHT_FORWARD, baseSpeed);
+	analogWrite(RIGHT_FORWARD, baseSpeed+baseSpeed/50);
 	analogWrite(LEFT_BACKWARD, 0);
 	analogWrite(RIGHT_BACKWARD, 0);
 	currentSpeedLeft = baseSpeed;
-	currentSpeedRight = baseSpeed;
+	currentSpeedRight = baseSpeed + baseSpeed / 50;
+}
+
+void MovementClass::goForwardCell(const int &a) //go foward num cell
+{
+	travel = a * 18;
+	distance = (left_encoder.read() + right_encoder.read()) / 2.0 * WHEEL_CIRCUMFERENCE / 5760.0;
+	if (distance > 0.99*travel)
+		stop();
+	else if ((travel - distance) < 10)
+	{
+		if (!slowFlag)
+		{
+			slowFlag = true;
+			slow(minSpeed);
+		}
+		goForward(minSpeed, minSpeed);
+	}
 }
 
 void MovementClass::stop()
 {
+	slowFlag = false;
 	analogWrite(LEFT_FORWARD, baseSpeed);
 	analogWrite(RIGHT_FORWARD, baseSpeed);
 	analogWrite(LEFT_BACKWARD, baseSpeed);
@@ -73,11 +94,12 @@ void MovementClass::stop()
 
 void MovementClass::slow(const int & a)
 {
-	analogWrite(LEFT_FORWARD, baseSpeed);
-	analogWrite(RIGHT_FORWARD, baseSpeed);
-	analogWrite(LEFT_BACKWARD, baseSpeed);
-	analogWrite(RIGHT_BACKWARD, baseSpeed);
-	delay(100);
+	analogWrite(LEFT_FORWARD, 250);
+	analogWrite(RIGHT_FORWARD, 250);
+	analogWrite(LEFT_BACKWARD, 250);
+	analogWrite(RIGHT_BACKWARD, 250);
+	delay(300);
+	baseSpeed = minSpeed;
 	goForward(a, a);
 }
 
@@ -86,8 +108,8 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 	
 	resetEncoder();
 	int error = 0;
-	int tolerance = 60;
-	int minSpeed = 200;
+	int tolerance = 30;
+	int turnSpeed = 180;
 	elapsedMillis timeLimit =0;
 	int limit = 500;
 	while (timeLimit < limit)
@@ -101,8 +123,7 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 			error = (QUARTER_TURN_DISTANCE - (left_encoder.read() - right_encoder.read()));
 			break;
 		case BACK:
-			minSpeed = 200;
-			limit = 1000;
+			limit = 2000;
 			error = (2*QUARTER_TURN_DISTANCE - (left_encoder.read() - right_encoder.read()));
 		}
 		
@@ -110,98 +131,28 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 		{
 			analogWrite(LEFT_BACKWARD, 0);
 			analogWrite(RIGHT_FORWARD, 0);
-			analogWrite(LEFT_FORWARD,  minSpeed);
-			analogWrite(RIGHT_BACKWARD, minSpeed + 60);
+			analogWrite(LEFT_FORWARD, turnSpeed);
+			analogWrite(RIGHT_BACKWARD, turnSpeed+5);
 		}
 
 		else if (error < -tolerance)							// negative turn left
 		{
 			analogWrite(LEFT_FORWARD, 0);
 			analogWrite(RIGHT_BACKWARD, 0);
-			analogWrite(LEFT_BACKWARD, minSpeed);
-			analogWrite(RIGHT_FORWARD, minSpeed + 60);
+			analogWrite(LEFT_BACKWARD, turnSpeed);
+			analogWrite(RIGHT_FORWARD, turnSpeed+5);
 		}
 
 		else                                                   // brake
 		{
-			analogWrite(LEFT_FORWARD, 250);
-			analogWrite(RIGHT_BACKWARD, 250);
-			analogWrite(LEFT_BACKWARD, 250);
-			analogWrite(RIGHT_FORWARD, 250);
+			analogWrite(LEFT_FORWARD, 50);
+			analogWrite(RIGHT_BACKWARD, 50);
+			analogWrite(LEFT_BACKWARD, 50);
+			analogWrite(RIGHT_FORWARD, 50);
 		}
 	}
 	goForward(0, 0);
 	resetEncoder();
-}
-
-void MovementClass::turn_gyro(const Turn & dir) // turn by gyro with LEFT,RIGHT, BACK
-{
-	
-	int count = left_encoder.read();
-	short dt = 100;
-	double curAngle = 0;
-	double turn = 90;
-	int turnSpeed = 250;
-	switch (dir)
-	{
-	case LEFT:
-		
-
-		while (curAngle < turn)
-		{
-			curAngle += getGyroError() * 3.3 / 65535 / (0.57/1000)  * dt / 1000000;
-			turnSpeed = baseSpeed - (baseSpeed) * (curAngle / turn);
-			if (curAngle > 30) turnSpeed = 100;
-
-			analogWrite(LEFT_BACKWARD, turnSpeed);
-			analogWrite(LEFT_FORWARD, 0);
-			analogWrite(RIGHT_FORWARD, turnSpeed);
-			analogWrite(RIGHT_BACKWARD, 0);
-			delayMicroseconds(dt);
-		}
-
-		break;
-
-	case RIGHT:
-		
-
-		while (curAngle < turn*2/3)
-		{
-			curAngle += -getGyroError() * 3.3 / 65535 / (0.57 / 1000)  * dt / 1000000;
-			turnSpeed = baseSpeed - (baseSpeed ) * (curAngle / (turn * 2 / 3));
-			if (curAngle > 30) turnSpeed = 100;
-
-			analogWrite(LEFT_FORWARD, turnSpeed);
-			analogWrite(LEFT_BACKWARD, 0);
-			analogWrite(RIGHT_BACKWARD, turnSpeed);
-			analogWrite(RIGHT_FORWARD, 0);
-			delayMicroseconds(dt);
-		}
-
-		break;
-
-	case BACK:
-
-		
-
-		while (curAngle < 2*turn)
-		{
-			curAngle += getGyroError() * 3.3 / 65535 / (0.57 / 1000)  * dt / 1000000;
-			turnSpeed = baseSpeed - (baseSpeed) * (curAngle / (2*turn));
-			if (curAngle > 120) turnSpeed = 100;
-			
-			analogWrite(LEFT_BACKWARD, turnSpeed);
-			analogWrite(LEFT_FORWARD, 0);
-			analogWrite(RIGHT_FORWARD, turnSpeed);
-			analogWrite(RIGHT_BACKWARD, 0);
-			delayMicroseconds(dt);
-		}
-
-		break;
-	}
-	left_encoder.write(count);
-	right_encoder.write(count);
-	goForward(0,0);
 }
 
 //MovementClass Movement;
