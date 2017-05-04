@@ -9,8 +9,12 @@
 	#include "WProgram.h"
 #endif
 #include "Map.h"
-#include "Led.h"
-#include "Movement.h"
+
+
+
+class SoftWareSerial;
+class LedClass;
+class MovementClass;
 using namespace std;
 
 class MazeClass
@@ -22,39 +26,20 @@ class MazeClass
 	 Dir nextDirection;
 	 double curDistance;
 
+	 //stack<Coordinate> path;
+
 	 LedClass* led;
 	 MovementClass* move;
 
-	 MazeClass(LedClass* a, MovementClass* b)
-	 {
-		 led = a;
-		 move = b;
-		 for (short int i = 0; i < SIZE; i++)
-		 {
-			 for (short int j = 0; j < SIZE; j++)
-			 {
-				 maze[i][j] = Cell();
+	 MazeClass(LedClass* a, MovementClass* b);
 
-				 //left most
-				 if (i == 0) maze[i][j].wallWest = true;
+	 void updateMap();
+	 
+	 void mapping();
 
-				 //right most
-				 if (i == (SIZE - 1)) maze[i][j].wallEast = true;
+	 //void floodFill(const Coordinate &end);
 
-				 //bot most
-				 if (j == 0) maze[i][j].wallSouth = true;
-
-				 //top most
-				 if (j == (SIZE - 1)) maze[i][j].wallNorth = true;
-
-			 }
-		 }
-		 //start cell
-		 maze[0][0] = Cell(false, true, true, true, true);
-		 curLocation = Coordinate(0, 0);
-		 curDirection = NORTH;
-		 nextDirection = NORTH;
-	 }
+	 String printMap();
 
 };
 

@@ -1,4 +1,7 @@
-#include "Map.h"
+#include "Maze.h"
+#include "Led.h"
+#include "Movement.h"
+
 
 Coordinate getCoord(const Coordinate &a, const Dir &dir)
 {

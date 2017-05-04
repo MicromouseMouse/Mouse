@@ -11,7 +11,7 @@
 
 #define ENCODER_OPTIMIZE_INTERRUPTS
 #include <Encoder.h>
-
+#include "Maze.h"
 
 const uint8_t LEFT_ENCODER_1 = 0;
 const uint8_t LEFT_ENCODER_2 = 1;
@@ -25,7 +25,7 @@ const uint8_t LEFT_BACKWARD = 4;
 const uint8_t RIGHT_FORWARD = 10;
 const uint8_t RIGHT_BACKWARD = 9;
 
-const int QUARTER_TURN_DISTANCE = 5250;
+const int QUARTER_TURN_DISTANCE = 5350;
 const double WHEEL_CIRCUMFERENCE = 3.7 * PI;
 const int GYRO_OFFSET = 29976;
 
@@ -41,8 +41,10 @@ public:
 	int currentSpeedLeft;
 	int currentSpeedRight;
 	int offsetEncoder;
-	
-
+	double distance;
+	double travel;
+	int minSpeed;
+	bool slowFlag;
 
 
 	int getGyroError()
@@ -81,8 +83,7 @@ public:
 
 	void turn_encoder(const Turn & dir);  // turn by encoder with LEFT,RIGHT, BACK
 
-	void turn_gyro(const Turn & dir); // turn by gyro with LEFT,RIGHT, BACK
-	
+	void goForwardCell(const int &a);
 };
 
 //extern MovementClass Movement(0);
