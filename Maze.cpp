@@ -12,6 +12,7 @@ SoftwareSerial bt(7, 8);
 
 MazeClass::MazeClass(LedClass* a, MovementClass* b)
 {
+	counter = 1;
 	led = a;
 	move = b;
 	for (int j = SIZE -1; j >= 0 ; j--)
@@ -46,13 +47,12 @@ MazeClass::MazeClass(LedClass* a, MovementClass* b)
 void MazeClass::updateMap()
 {
 	bool front = (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > 15000);
-	bool left = (led->getLed(LEFT_DIAGONAL) > 5000);
-	bool right = (led->getLed(RIGHT_DIAGONAL) > 5000);
+	bool left =  led->left_diagonal > 8000;
+	bool right = led->right_diagonal > 8000;
 
 	switch (curDirection)
 	{
 	case NORTH:
-		bt.println("in NORTH");
 		curLocation = Coordinate(curLocation.x, curLocation.y + 1);
 		maze[curLocation.x][curLocation.y].wallNorth = front;
 		maze[curLocation.x][curLocation.y].wallEast = right;
@@ -72,6 +72,7 @@ void MazeClass::updateMap()
 		maze[curLocation.x][curLocation.y].wallSouth = front;
 		maze[curLocation.x][curLocation.y].wallWest = right;
 		maze[curLocation.x][curLocation.y].wallEast = left;
+		maze[curLocation.x][curLocation.y].visited = true;
 
 		if (curLocation.y > 0)											// cell south
 			maze[curLocation.x][curLocation.y - 1].wallNorth = front;
@@ -83,36 +84,38 @@ void MazeClass::updateMap()
 		break;
 	case EAST:
 		curLocation = Coordinate(curLocation.x + 1, curLocation.y);
-		maze[curLocation.x][curLocation.y].wallWest = front;
-		maze[curLocation.x][curLocation.y].wallNorth = right;
-		maze[curLocation.x][curLocation.y].wallSouth = left;
-
-		//cell west
-		if (curLocation.x > 0)
-			maze[curLocation.x - 1][curLocation.y].wallEast = front;
-		//cell north
-		if (curLocation.y < SIZE - 1)
-			maze[curLocation.x][curLocation.y + 1].wallSouth = right;
-		//cell south
-		if (curLocation.y > 0)
-			maze[curLocation.x][curLocation.y - 1].wallNorth = left;
-
-		break;
-	case WEST:
-		curLocation = Coordinate(curLocation.x + 1, curLocation.y);
 		maze[curLocation.x][curLocation.y].wallEast = front;
 		maze[curLocation.x][curLocation.y].wallSouth = right;
 		maze[curLocation.x][curLocation.y].wallNorth = left;
+		maze[curLocation.x][curLocation.y].visited = true;
 
 		//cell east
 		if (curLocation.x < SIZE - 1)
 			maze[curLocation.x + 1][curLocation.y].wallWest = front;
-		//cell south
-		if (curLocation.y  > 0)
-			maze[curLocation.x][curLocation.y - 1].wallNorth = right;
 		//cell north
 		if (curLocation.y < SIZE - 1)
 			maze[curLocation.x][curLocation.y + 1].wallSouth = left;
+		//cell south
+		if (curLocation.y > 0)
+			maze[curLocation.x][curLocation.y - 1].wallNorth = right;
+
+		break;
+	case WEST:
+		curLocation = Coordinate(curLocation.x - 1, curLocation.y);
+		maze[curLocation.x][curLocation.y].wallWest = front;
+		maze[curLocation.x][curLocation.y].wallNorth = right;
+		maze[curLocation.x][curLocation.y].wallSouth = left;
+		maze[curLocation.x][curLocation.y].visited = true;
+
+		//cell west
+		if (curLocation.x > 0)
+			maze[curLocation.x -1][curLocation.y].wallEast = front;
+		//cell south
+		if (curLocation.y  > 0)
+			maze[curLocation.x][curLocation.y - 1].wallNorth = left;
+		//cell north
+		if (curLocation.y < SIZE - 1)
+			maze[curLocation.x][curLocation.y + 1].wallSouth = right;
 
 		break;
 	}
@@ -120,13 +123,11 @@ void MazeClass::updateMap()
 
 void MazeClass::mapping()
 {
-	
-	 
-	if (move->getDistanceTravel() > 18.0 )
+	if (move->getDistanceTravel() > 18.0*counter )
 	{
-		move->resetEncoder();
-		bt.println("in Mapping");
+		++counter;
 		updateMap();
+		bt.println("update map");
 	}
 }
 

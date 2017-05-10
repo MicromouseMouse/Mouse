@@ -36,6 +36,10 @@ public:
 	double integrator;
 	elapsedMicros time;
 
+	int encoderOffset;
+
+	bool encoderFlag;
+
 	double Ki_led ;
 	double Kp_led ;
 	double Kd_led ;

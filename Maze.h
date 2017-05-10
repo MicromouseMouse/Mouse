@@ -26,6 +26,7 @@ class MazeClass
 	 Dir nextDirection;
 	 double curDistance;
 
+	 int counter;
 	 //stack<Coordinate> path;
 
 	 LedClass* led;

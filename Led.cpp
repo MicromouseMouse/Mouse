@@ -31,11 +31,13 @@ LedClass::LedClass()
 void LedClass::init()
 {
 	delay(1000);
-	measure(1000);
+	measure(10);
 	leftThreshold = left_diagonal ;
 	rightThreshold = right_diagonal ;
 	frontThreshold = left_rear + right_rear + 1000;
-	offsetLed = left_diagonal - right_diagonal;
+	offsetLed = left_diagonal - right_diagonal - 150;
+	leftMiddleThreshold = left_middle;
+	rightMiddleThreshold = right_middle;
 }
 
 int LedClass::getLed(const LED &a)

@@ -29,8 +29,11 @@ const int QUARTER_TURN_DISTANCE = 5350;
 const double WHEEL_CIRCUMFERENCE = 3.7 * PI;
 const int GYRO_OFFSET = 29976;
 
+const int QUARTER_CURVE_TURN = 13350;
+const float SPEED_RATIO = 88 / 37.0;
 
-enum Turn{LEFT,RIGHT,BACK};
+
+enum Turn{LEFT,RIGHT,BACK,DIAGONAL_LEFT,DIAGONAL_RIGHT,U_LEFT, U_RIGHT};
 
 class MovementClass
 {
@@ -79,11 +82,17 @@ public:
 	
 	void goForward(const int & left, const int & right);  // go forward at specified speed
 
+	void goBackward(const int & left, const int & right);
+
 	void goForward(); // go forward at base speed
 
 	void turn_encoder(const Turn & dir);  // turn by encoder with LEFT,RIGHT, BACK
 
+	void curveTurn(const Turn &dir);
+
 	void goForwardCell(const int &a);
+
+	void stopForward();
 };
 
 //extern MovementClass Movement(0);

@@ -14,6 +14,7 @@ using namespace std;
 elapsedMicros time;  // timer for pid to calculate dt
 elapsedMicros control;  // timer to reset flag
 elapsedMicros mapLoop;
+elapsedMillis speed;
 bool ledFlag = true;
 bool PIDFlag = true;
 bool slowFlag = false;
@@ -23,7 +24,7 @@ volatile bool modeLeft = false;
 volatile bool modeRight = false;
 
 const int ledTime = 10; //microsecond
-const int baseSpeed = 150;
+const int baseSpeed = 175;
 
 LedClass led;
 MovementClass move(baseSpeed);
@@ -31,7 +32,7 @@ PIDClass pid(&move, &led, time);
 MazeClass maze(&led, &move);
 SoftwareSerial bluetooth(7, 8);
 
-const int frontWallThreshold = 24000;
+const int frontWallThreshold = 18000;
 void testLed();
 void testEncoder();
 void testMotor();
@@ -39,9 +40,9 @@ void testStraight(const PID_MODE& A, char m);
 
 void setup()
 {
-	delay(1000);
+	delay(5000);
 	bluetooth.begin(9600);
-	
+	Serial.begin(9600);
 	led.init();
 	
 	move.resetEncoder();
@@ -62,39 +63,72 @@ void loop()
 
 void testOneWay(const PID_MODE &A)
 {
+	speed = 0;
+	float extraSpace = 0;
 	while (true)
-	{
+	{ /*
+		if(speed < 1200) extraSpace = speed * 4.8;
+		else if (speed < 800) extraSpace = speed * 4.5;
+		else if (speed < 500) extraSpace = speed *4.2;
+		else extraSpace = speed *4.8;
+		if (extraSpace > 9000) extraSpace = 9000;
 		
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold)
+		if (speed < 500) extraSpace = speed * 4;
+		else if (speed < 800) extraSpace = speed * 4.5;
+		else if (speed < 1100) extraSpace = speed * 5;
+		else if (speed < 1200) extraSpace = speed *3.5;
+		else extraSpace = speed *3.5;
+		if (extraSpace > 9000) extraSpace = 9000;
+		*/
+		bluetooth.print(move.getDistanceTravel(), 3);
+		bluetooth.print(" ");
+		bluetooth.println(maze.counter);
+		maze.mapping();
+		
+		extraSpace = speed * 4.5;
+		
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold - extraSpace)
 		{
-			move.stop();
+			move.stopForward();
+			maze.counter = 1;
 			led.measure(ledTime);
+			maze.updateMap();
 			if (led.getLed(LEFT_DIAGONAL) < WALL_LEFT)
 			{
 				move.turn_encoder(LEFT);
+				maze.curDirection = leftDir(maze.curDirection);
 				led.measure(ledTime);
 			}
 			else if (led.getLed(RIGHT_DIAGONAL) < WALL_RIGHT)
 			{
 				move.turn_encoder(RIGHT);
+				maze.curDirection = rightDir(maze.curDirection);
 				led.measure(ledTime);
 			}
 			slowFlag = false;
 			move.baseSpeed = baseSpeed;
+			
+			
+
+			bluetooth.println(maze.printMap());
+			bluetooth.print(maze.curLocation.x);
+			bluetooth.print(" ");
+			bluetooth.println(maze.curLocation.y);
+			delay(2000);
+			speed = 0;
 			continue;
 		}
-		else if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold && !slowFlag)
-		{
-			slowFlag = true;
-			move.slow(100);
-		}
-
-
+		
+		
 		if (control > 1000)
 		{
 			ledFlag = true;
 			PIDFlag = true;
 			control = 0;
+		}
+		else if (control > 330)
+		{
+			ledFlag = true;
 		}
 
 		if (ledFlag)
@@ -132,10 +166,10 @@ void testLed()
 		Serial.print(led.getLed(RIGHT_REAR), DEC);
 		Serial.println("\n");
 		*/
-
+		
 		bluetooth.println("test");
 		bluetooth.print("");
-		bluetooth.println(led.getLed(LEFT_REAR));//, DEC);
+		bluetooth.print(led.getLed(LEFT_REAR));//, DEC);
 		bluetooth.print("  ");
 		bluetooth.print(led.getLed(LEFT_DIAGONAL));//, DEC);
 		bluetooth.print("  ");
@@ -148,7 +182,7 @@ void testLed()
 		bluetooth.print(led.getLed(RIGHT_REAR));//, DEC);
 		bluetooth.println("\n");
 		delay(500);
-
+		
 		//bluetooth.println("test");
 		delay(100);
 
@@ -165,13 +199,17 @@ void testMotor()
 		//delay(2000);
 		//move.turn_encoder(LEFT);
 
-		delay(2000);
-		move.turn_encoder(RIGHT);
+		//delay(2000);
+		//move.turn_encoder(RIGHT);
 
 		//delay(2000);
 		//move.turn_encoder(BACK);
 
+		//delay(2000);
+		//move.turn_encoder(DIAGONAL_RIGHT);
 
+		delay(2000);
+		move.curveTurn(RIGHT);
 	}
 }
 
