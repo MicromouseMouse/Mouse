@@ -37,3 +37,41 @@ Dir getDir(const Coordinate & now, const Coordinate &next)
 		else return WEST;
 	}
 }
+
+int shortestDistance(const Coordinate &a, const Coordinate &b)
+{
+	return absolute(a.x - b.x) + absolute(a.y - b.y);
+}
+
+Coordinate getCellDir(const Coordinate &cur, const Dir &dir)
+{
+	switch (dir)
+	{
+	case NORTH:
+		if (cur.y < SIZE - 1) return Coordinate(cur.x, cur.y + 1);
+		else return NULL_COORD;
+		break;
+	case SOUTH:
+		if (cur.y > 0) return Coordinate(cur.x, cur.y - 1);
+		else return NULL_COORD;
+		break;
+	case EAST:
+		if (cur.x < SIZE - 1) return Coordinate(cur.x + 1, cur.y);
+		else return NULL_COORD;
+		break;
+	case WEST:
+		if (cur.x > 0) return Coordinate(cur.x - 1, cur.y);
+		else return NULL_COORD;
+		break;
+	default:
+		return NULL_COORD;
+	}
+}
+
+Dir getDirToGo(const Coordinate &cur, const Coordinate &next)
+{
+	if (cur.x + 1 == next.x) return EAST;
+	else if (cur.x - 1 == next.x) return WEST;
+	else if (cur.y + 1 == next.y) return NORTH;
+	else return SOUTH;
+}

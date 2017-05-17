@@ -14,8 +14,8 @@ PIDClass::PIDClass(MovementClass * a, LedClass* b, elapsedMicros & t)
 	lastError = 0;
 	integrator = 0;
 	Ki_led = 0;
-	Kp_led = 1;
-	Kd_led = 120;
+	Kp_led = 0.3;
+	Kd_led = 60;
 
 	Ki_encoder = 0;
 	Kp_encoder = 1;
@@ -23,6 +23,7 @@ PIDClass::PIDClass(MovementClass * a, LedClass* b, elapsedMicros & t)
 
 	encoderFlag = false;
 	encoderOffset = 0;
+	turnFlag = false;
 }
 
 void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
@@ -36,23 +37,24 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 	int rightF = led->right_middle;
 	int leftD = led->left_diagonal;
 	int rightD = led->right_diagonal;
-
+	if (leftD > led->leftThreshold*0.9 && rightD > led->rightThreshold*0.9) turnFlag = false;
 	switch (mode)
 	{
 	case LED_MODE:
 		
-		if ( (leftF > led->leftMiddleThreshold - 800 || leftD > WALL_LEFT)
-		&& (rightF > led->rightMiddleThreshold - 800 || rightD > WALL_RIGHT)) // wall both side
+		if ((leftF > led->leftMiddleThreshold*0.9 || leftD > led->leftThreshold*0.8)
+			&& (rightF > led->rightMiddleThreshold*0.8 || rightD > led->rightThreshold*0.8)
+			&& turnFlag == false) // wall both side
 		{
 		error = leftD - rightD - led->offsetLed;
 		}
-		else if (leftF > led->leftMiddleThreshold - 800 || leftD > WALL_LEFT) //wall left
+		else if (leftF > led->leftMiddleThreshold*0.9 || leftD > led->leftThreshold*0.8) //wall left
 		{
-		error = leftD - led->leftThreshold -200;
+			error = leftD - led->leftThreshold +5000;//-200;
 		}
-		else if (rightF > led->rightMiddleThreshold - 800 || rightD > WALL_RIGHT)  //wall right
+		else if (rightF > led->rightMiddleThreshold*0.8 || rightD > led->rightThreshold*0.8)  //wall right
 		{
-		error = led->rightThreshold + 1000 - rightD;
+			error = led->rightThreshold - rightD -5000;//+1000;
 		}
 		else
 		{
@@ -66,8 +68,8 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 		}	// no wall will switch to encoder
 		
 
-		//error = led->rightThreshold + 1000 - rightD;
-		//error = leftD - led->leftThreshold - 200;
+		//error = led->rightThreshold- rightD;
+		//error = leftD - led->leftThreshold;
 		encoderFlag = false;
 		encoderOffset = 0;
 		pError = Kp_led* error;

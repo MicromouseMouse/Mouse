@@ -34,8 +34,8 @@ void LedClass::init()
 	measure(10);
 	leftThreshold = left_diagonal ;
 	rightThreshold = right_diagonal ;
-	frontThreshold = left_rear + right_rear + 1000;
-	offsetLed = left_diagonal - right_diagonal - 150;
+	frontThreshold = left_rear + right_rear;
+	offsetLed = left_diagonal - right_diagonal;
 	leftMiddleThreshold = left_middle;
 	rightMiddleThreshold = right_middle;
 }
@@ -60,19 +60,6 @@ int LedClass::getLed(const LED &a)
 	exit(1);
 }
 
-bool LedClass::checkWall(const Wall &a)
-{
-	switch (a)
-	{
-	case W_LEFT:
-		return wallLeft;
-	case W_RIGHT:
-		return wallRight;
-	case W_FRONT:
-		return wallFront;
-	}
-	exit(1);
-}
 
 void LedClass::measure(const unsigned int &time)
 {

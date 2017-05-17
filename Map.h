@@ -11,7 +11,7 @@
 
 using namespace std;
 
-const unsigned short SIZE = 6;
+const unsigned short SIZE = 16;
 const double CELL = 18;
 
 enum Dir {
@@ -79,6 +79,16 @@ struct Coordinate
 
 const Coordinate NULL_COORD = Coordinate(-1, -1);
 
+template<typename T>
+T absolute(const T &a)
+{
+	if (a > 0) return a;
+	else return -a;
+}
+
+int shortestDistance(const Coordinate &a, const Coordinate &b);
+
+
 inline bool operator<(const Coordinate & a, const Coordinate &b)
 {
 	if (a.x == b.x) return a.y < b.y;
@@ -113,6 +123,15 @@ struct Cell
 		:wallNorth(N), wallEast(E), wallSouth(S), wallWest(W), visited(V) {}
 };
 
+struct MazeCount
+{
+	Coordinate current;
+	int count;
+	MazeCount(const Coordinate &cur = Coordinate(0,0), const int &a = 0):current(cur),count(a){}
+};
+
+Coordinate getCellDir(const Coordinate &cur, const Dir &dir);
+Dir getDirToGo(const Coordinate &cur, const Coordinate &next);
 
 #endif
 

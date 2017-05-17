@@ -39,6 +39,7 @@ public:
 	int encoderOffset;
 
 	bool encoderFlag;
+	bool turnFlag;
 
 	double Ki_led ;
 	double Kp_led ;

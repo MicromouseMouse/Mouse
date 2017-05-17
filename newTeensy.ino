@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <SoftwareSerial.h>
 
+
 using namespace std;
 elapsedMicros time;  // timer for pid to calculate dt
 elapsedMicros control;  // timer to reset flag
@@ -24,7 +25,7 @@ volatile bool modeLeft = false;
 volatile bool modeRight = false;
 
 const int ledTime = 10; //microsecond
-const int baseSpeed = 175;
+const int baseSpeed = 125;
 
 LedClass led;
 MovementClass move(baseSpeed);
@@ -32,7 +33,7 @@ PIDClass pid(&move, &led, time);
 MazeClass maze(&led, &move);
 SoftwareSerial bluetooth(7, 8);
 
-const int frontWallThreshold = 18000;
+const int frontWallThreshold = 17500;
 void testLed();
 void testEncoder();
 void testMotor();
@@ -40,14 +41,16 @@ void testStraight(const PID_MODE& A, char m);
 
 void setup()
 {
-	delay(5000);
+	delay(2000);
 	bluetooth.begin(9600);
 	Serial.begin(9600);
 	led.init();
 	
+	move.turn_encoder(BACK);
 	move.resetEncoder();
 	control = 0;
 	time = 0;
+	led.measure(ledTime);
 	//move.goForward();
 }
 
@@ -57,8 +60,65 @@ void loop()
 	//testEncoder();
 	//testMotor();
 	//testStraight(ENCODER_MODE,'a');
-	testOneWay(LED_MODE);
+	//testSolving();
+	 testOneWay(LED_MODE);
+	//testRealMaze(LED_MODE);
+}
 
+void testRealMaze(const PID_MODE &A)
+{
+	speed = 0;
+	float extraSpace = 0;
+	while (true)
+	{ 
+		maze.mapping();
+		extraSpace = speed * 4.5;
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold - extraSpace)
+		{
+			move.stopForward();
+			maze.counter = 1;
+			led.measure(ledTime);
+			maze.updateMap();
+			maze.floodFill(Coordinate(8, 8));
+			maze.command();
+			
+			move.baseSpeed = baseSpeed;
+			delay(500);
+			speed = 0;
+			continue;
+		}
+
+
+		if (control > 500)
+		{
+			ledFlag = true;
+			PIDFlag = true;
+			control = 0;
+		}
+		else if (control > 330)
+		{
+			ledFlag = true;
+		}
+
+		if (ledFlag)
+		{
+			led.measure(ledTime);
+			ledFlag = false;
+		}
+
+		if (PIDFlag)
+		{
+			pid.PID(A);
+			PIDFlag = false;
+		}
+	}
+}
+
+
+void testSolving()
+{
+	maze.floodFill(Coordinate(8,8));
+	maze.command();
 }
 
 void testOneWay(const PID_MODE &A)
@@ -66,61 +126,43 @@ void testOneWay(const PID_MODE &A)
 	speed = 0;
 	float extraSpace = 0;
 	while (true)
-	{ /*
-		if(speed < 1200) extraSpace = speed * 4.8;
-		else if (speed < 800) extraSpace = speed * 4.5;
-		else if (speed < 500) extraSpace = speed *4.2;
-		else extraSpace = speed *4.8;
-		if (extraSpace > 9000) extraSpace = 9000;
-		
-		if (speed < 500) extraSpace = speed * 4;
-		else if (speed < 800) extraSpace = speed * 4.5;
-		else if (speed < 1100) extraSpace = speed * 5;
-		else if (speed < 1200) extraSpace = speed *3.5;
-		else extraSpace = speed *3.5;
-		if (extraSpace > 9000) extraSpace = 9000;
-		*/
-		bluetooth.print(move.getDistanceTravel(), 3);
-		bluetooth.print(" ");
-		bluetooth.println(maze.counter);
-		maze.mapping();
-		
-		extraSpace = speed * 4.5;
-		
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold - extraSpace)
+	{ 
+		//maze.mapping();	
+		extraSpace = speed ;
+		if (speed > 3000) speed = 3000;
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.9 - extraSpace)
 		{
 			move.stopForward();
+			pid.turnFlag = true;
 			maze.counter = 1;
 			led.measure(ledTime);
-			maze.updateMap();
-			if (led.getLed(LEFT_DIAGONAL) < WALL_LEFT)
+			//maze.updateMap();
+			if (led.getLed(LEFT_DIAGONAL) < 0.7*led.leftThreshold)
 			{
 				move.turn_encoder(LEFT);
 				maze.curDirection = leftDir(maze.curDirection);
 				led.measure(ledTime);
 			}
-			else if (led.getLed(RIGHT_DIAGONAL) < WALL_RIGHT)
+			else if (led.getLed(RIGHT_DIAGONAL) < 0.7*led.rightThreshold)
 			{
 				move.turn_encoder(RIGHT);
 				maze.curDirection = rightDir(maze.curDirection);
 				led.measure(ledTime);
 			}
-			slowFlag = false;
+			else
+			{
+				move.turn_encoder(BACK);
+				maze.curDirection = opposite(maze.curDirection);
+				led.measure(ledTime);
+			}
 			move.baseSpeed = baseSpeed;
-			
-			
-
-			bluetooth.println(maze.printMap());
-			bluetooth.print(maze.curLocation.x);
-			bluetooth.print(" ");
-			bluetooth.println(maze.curLocation.y);
-			delay(2000);
+			delay(500);
 			speed = 0;
 			continue;
 		}
 		
 		
-		if (control > 1000)
+		if (control > 3000)
 		{
 			ledFlag = true;
 			PIDFlag = true;

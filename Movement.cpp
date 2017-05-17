@@ -1,7 +1,4 @@
-// 
-// 
-// 
-
+#include "Maze.h"
 #include "Movement.h"
 #include <Bounce.h>
 
@@ -40,7 +37,7 @@ long MovementClass::getEncoderReading(const Turn& side)
 
 float MovementClass::getDistanceTravel()   // get total distance travel
 {
-	distance = ((left_encoder.read() + right_encoder.read())/2.0) * WHEEL_CIRCUMFERENCE / 5760.0;
+	distance = ((left_encoder.read() + right_encoder.read())/2.0) * WHEEL_CIRCUMFERENCE / 5760.0 *30/29.0;
 	return distance;
 }
 
@@ -96,10 +93,10 @@ void MovementClass::stopForward()
 	int initial = left_encoder.read() + right_encoder.read();
 	int current = left_encoder.read() + right_encoder.read();
 	int dt = 100;
-	while(current + 1000  > initial )
+	while(current + baseSpeed*8  > initial )
 	{
 		current = left_encoder.read() + right_encoder.read();
-		goBackward(1023, 1023);// kp*speed, kp*speed);
+		goBackward(baseSpeed*5, baseSpeed*5);// kp*speed, kp*speed);
 		delayMicroseconds(dt);
 	}
 	goForward(0, 0);
@@ -134,9 +131,9 @@ void MovementClass::curveTurn(const Turn &dir)
 	elapsedMillis timeLimit= 0;
 	int left = left_encoder.read();
 	int right = right_encoder.read();
-	int turnDistance;
-	int leftBaseSpeed;
-	int rightBaseSpeed;
+	int turnDistance=0;
+	int leftBaseSpeed=0;
+	int rightBaseSpeed=0;
 	int tolerance = 40;
 
 	if (dir == U_LEFT || dir == U_RIGHT) turnDistance = 2 * QUARTER_CURVE_TURN;
@@ -162,10 +159,14 @@ void MovementClass::curveTurn(const Turn &dir)
 			error = SPEED_RATIO *right - left;
 			goForward(leftBaseSpeed + kp*error, rightBaseSpeed - kp*error);
 			break;
+		default:
+			exit(1);
 		}
 		
 		left = left_encoder.read();
 		right = right_encoder.read();
+		break;
+		
 	}
 
 	timeLimit = 0;
@@ -200,6 +201,9 @@ void MovementClass::curveTurn(const Turn &dir)
 			{
 				goBackward(leftBaseSpeed - kp*error2, rightBaseSpeed + kp*error2);
 			}
+			break;
+		default:
+			exit(1);
 		}
 	}
 	stop();
@@ -214,7 +218,7 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 	int tolerance = 30;
 	int turnSpeed = 230;
 	elapsedMillis timeLimit =0;
-	int limit = 500;
+	unsigned int limit = 500;
 
 	while (timeLimit < limit)
 	{
@@ -226,12 +230,12 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 			break;
 		case DIAGONAL_LEFT:
 			error = -(QUARTER_TURN_DISTANCE/2 - (right_encoder.read() - left_encoder.read()));
-			turnSpeed = absolute(error) / (1.0*QUARTER_TURN_DISTANCE) * 100 + 130;
+			turnSpeed = absolute(error) / (0.5*QUARTER_TURN_DISTANCE) * 100 + 130;
 			limit = 350;
 			break;
 		case RIGHT:
 			error = (QUARTER_TURN_DISTANCE - (left_encoder.read() - right_encoder.read()));
-			turnSpeed = absolute(error) / (0.5*QUARTER_TURN_DISTANCE) * 100 + 130;
+			turnSpeed = absolute(error) / (1.0*QUARTER_TURN_DISTANCE) * 100 + 130;
 			break;
 		case DIAGONAL_RIGHT:
 			error = (QUARTER_TURN_DISTANCE/2 - (left_encoder.read() - right_encoder.read()));
@@ -242,6 +246,9 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 			limit = 1000;
 			error = (2 * QUARTER_TURN_DISTANCE - (left_encoder.read() - right_encoder.read()));
 			turnSpeed = absolute(error) / (2.0*QUARTER_TURN_DISTANCE) * 100 + 130;
+			break;
+		default:
+			exit(1);
 		}
 
 
@@ -263,15 +270,13 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 
 		else                                                   // brake
 		{
-			analogWrite(LEFT_FORWARD, 50);
-			analogWrite(RIGHT_BACKWARD, 50);
-			analogWrite(LEFT_BACKWARD, 50);
-			analogWrite(RIGHT_FORWARD, 50);
+			analogWrite(LEFT_FORWARD, 250);
+			analogWrite(RIGHT_BACKWARD, 250);
+			analogWrite(LEFT_BACKWARD, 250);
+			analogWrite(RIGHT_FORWARD, 250);
 		}
 	}
 	goForward(0, 0); 
-
-	
 	resetEncoder();
 }
 

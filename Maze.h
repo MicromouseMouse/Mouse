@@ -8,9 +8,13 @@
 #else
 	#include "WProgram.h"
 #endif
+
 #include "Map.h"
+#include "Movement.h"
+#include <StackList\StackList\StackList.h>
+#include <QueueList\QueueList.h>
 
-
+enum Turn;
 
 class SoftWareSerial;
 class LedClass;
@@ -27,7 +31,7 @@ class MazeClass
 	 double curDistance;
 
 	 int counter;
-	 //stack<Coordinate> path;
+	 QueueList<Coordinate> realPath;
 
 	 LedClass* led;
 	 MovementClass* move;
@@ -38,7 +42,11 @@ class MazeClass
 	 
 	 void mapping();
 
-	 //void floodFill(const Coordinate &end);
+	 void floodFill(const Coordinate &end);
+
+	 void command();
+
+	 Turn getTurnDir(const Dir &next);
 
 	 String printMap();
 

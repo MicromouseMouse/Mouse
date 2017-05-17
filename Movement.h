@@ -11,7 +11,7 @@
 
 #define ENCODER_OPTIMIZE_INTERRUPTS
 #include <Encoder.h>
-#include "Maze.h"
+
 
 const uint8_t LEFT_ENCODER_1 = 0;
 const uint8_t LEFT_ENCODER_2 = 1;
