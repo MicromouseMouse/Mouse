@@ -93,10 +93,10 @@ void MovementClass::stopForward()
 	int initial = left_encoder.read() + right_encoder.read();
 	int current = left_encoder.read() + right_encoder.read();
 	int dt = 100;
-	while(current + baseSpeed*8  > initial )
+	while(current + 1000  > initial )
 	{
 		current = left_encoder.read() + right_encoder.read();
-		goBackward(baseSpeed*5, baseSpeed*5);// kp*speed, kp*speed);
+		goBackward(750, 750);// kp*speed, kp*speed);
 		delayMicroseconds(dt);
 	}
 	goForward(0, 0);

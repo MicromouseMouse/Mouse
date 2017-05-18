@@ -14,7 +14,7 @@ PIDClass::PIDClass(MovementClass * a, LedClass* b, elapsedMicros & t)
 	lastError = 0;
 	integrator = 0;
 	Ki_led = 0;
-	Kp_led = 0.3;
+	Kp_led = 0.5;
 	Kd_led = 60;
 
 	Ki_encoder = 0;
@@ -37,22 +37,22 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 	int rightF = led->right_middle;
 	int leftD = led->left_diagonal;
 	int rightD = led->right_diagonal;
-	if (leftD > led->leftThreshold*0.9 && rightD > led->rightThreshold*0.9) turnFlag = false;
+	
 	switch (mode)
 	{
 	case LED_MODE:
 		
-		if ((leftF > led->leftMiddleThreshold*0.9 || leftD > led->leftThreshold*0.8)
-			&& (rightF > led->rightMiddleThreshold*0.8 || rightD > led->rightThreshold*0.8)
+		if ((leftF > led->leftMiddleThreshold*0.6 && leftD > led->leftThreshold*0.6)
+			&& (rightF > led->rightMiddleThreshold*0.6 && rightD > led->rightThreshold*0.6)
 			&& turnFlag == false) // wall both side
 		{
 		error = leftD - rightD - led->offsetLed;
 		}
-		else if (leftF > led->leftMiddleThreshold*0.9 || leftD > led->leftThreshold*0.8) //wall left
+		else if (leftF > led->leftMiddleThreshold*0.6 && leftD > led->leftThreshold*0.6) //wall left
 		{
 			error = leftD - led->leftThreshold +5000;//-200;
 		}
-		else if (rightF > led->rightMiddleThreshold*0.8 || rightD > led->rightThreshold*0.8)  //wall right
+		else if (rightF > led->rightMiddleThreshold*0.6 && rightD > led->rightThreshold*0.6)  //wall right
 		{
 			error = led->rightThreshold - rightD -5000;//+1000;
 		}

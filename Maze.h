@@ -25,6 +25,7 @@ class MazeClass
 {
  public:
 	 Cell maze[SIZE][SIZE];
+	 int path[SIZE][SIZE];
 	 Coordinate curLocation;
 	 Dir curDirection;
 	 Dir nextDirection;
@@ -50,6 +51,9 @@ class MazeClass
 
 	 String printMap();
 
+	 String printPath();
+
+	 String printFloodFill();
 };
 
 

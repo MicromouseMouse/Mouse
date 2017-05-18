@@ -41,13 +41,14 @@ void testStraight(const PID_MODE& A, char m);
 
 void setup()
 {
-	delay(2000);
+	delay(7000);
 	bluetooth.begin(9600);
 	Serial.begin(9600);
 	led.init();
-	
 	move.turn_encoder(BACK);
 	move.resetEncoder();
+	led.leftMiddleThreshold = 4000;
+	led.rightMiddleThreshold = 4000;
 	control = 0;
 	time = 0;
 	led.measure(ledTime);
@@ -61,7 +62,7 @@ void loop()
 	//testMotor();
 	//testStraight(ENCODER_MODE,'a');
 	//testSolving();
-	 testOneWay(LED_MODE);
+	testOneWay(LED_MODE);
 	//testRealMaze(LED_MODE);
 }
 
@@ -78,9 +79,9 @@ void testRealMaze(const PID_MODE &A)
 			move.stopForward();
 			maze.counter = 1;
 			led.measure(ledTime);
-			maze.updateMap();
-			maze.floodFill(Coordinate(8, 8));
-			maze.command();
+			//maze.updateMap();
+			//maze.floodFill(Coordinate(8, 8));
+			//maze.command();
 			
 			move.baseSpeed = baseSpeed;
 			delay(500);
@@ -118,7 +119,8 @@ void testRealMaze(const PID_MODE &A)
 void testSolving()
 {
 	maze.floodFill(Coordinate(8,8));
-	maze.command();
+	//maze.command();
+	delay(10000);
 }
 
 void testOneWay(const PID_MODE &A)
@@ -127,23 +129,26 @@ void testOneWay(const PID_MODE &A)
 	float extraSpace = 0;
 	while (true)
 	{ 
-		//maze.mapping();	
-		extraSpace = speed ;
-		if (speed > 3000) speed = 3000;
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.9 - extraSpace)
+		maze.mapping();
+		extraSpace = 0;
+		if (speed > 2000) speed = 2000;
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.75 - extraSpace)
 		{
 			move.stopForward();
+			//bluetooth.println(maze.printMap());
+			//bluetooth.println(maze.printPath());
+			//bluetooth.println(maze.printFloodFill());
+			delay(2000);
 			pid.turnFlag = true;
 			maze.counter = 1;
 			led.measure(ledTime);
-			//maze.updateMap();
-			if (led.getLed(LEFT_DIAGONAL) < 0.7*led.leftThreshold)
+			if (led.getLed(LEFT_DIAGONAL) < 0.5*led.leftThreshold)
 			{
 				move.turn_encoder(LEFT);
 				maze.curDirection = leftDir(maze.curDirection);
 				led.measure(ledTime);
 			}
-			else if (led.getLed(RIGHT_DIAGONAL) < 0.7*led.rightThreshold)
+			else if (led.getLed(RIGHT_DIAGONAL) < 0.5*led.rightThreshold)
 			{
 				move.turn_encoder(RIGHT);
 				maze.curDirection = rightDir(maze.curDirection);
