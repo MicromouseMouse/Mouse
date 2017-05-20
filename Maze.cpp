@@ -488,3 +488,94 @@ void MazeClass::simpleFill()
 		move->goForward();
 	}
 }
+
+void MazeClass::randomMapping()
+{
+	if (move->getDistanceTravel() < 18.0*counter - 1.25)
+		return;
+	move->stopForward();
+	//delay(500);
+	
+
+	Turn randomDirection = determineRandomMotion();
+	switch (randomDirection)
+	{
+	case NO_TURN:
+		return;
+	case LEFT:
+		move->turn_encoder(LEFT);
+		return;
+	case RIGHT:
+		move->turn_encoder(RIGHT);
+		return;
+	case BACK:
+		move->turn_encoder(BACK);
+	}
+	move->resetEncoder();
+
+}
+
+Turn MazeClass::determineRandomMotion()
+{
+		bool leftOpening = led->getLed(LEFT_DIAGONAL) < led->leftThreshold;
+		bool rightOpening = led->getLed(RIGHT_DIAGONAL) < led->rightThreshold;
+		bool frontOpening = led->getLed(RIGHT_REAR) + led->getLed(LEFT_REAR) < led->frontThreshold;
+		if (leftOpening && rightOpening && frontOpening)
+		{
+			switch (millis() % 3)
+			{
+			case 0:
+				return NO_TURN;
+				break;
+			case 1:
+				// turn left;
+				return LEFT;
+				break;
+			case 2:
+				// turn left;
+				return RIGHT;
+			}
+		}
+
+		else if (leftOpening && frontOpening)
+		{
+			switch (millis() % 2)
+			{
+			case 0:
+				return NO_TURN;
+			case 1:
+				// turn left;
+				return LEFT;
+			}
+		}
+
+		else if (leftOpening && rightOpening)
+		{
+			switch (millis() % 2)
+			{
+			case 0:
+				return NO_TURN;
+			case 1:
+				// turn left;
+				return RIGHT;
+			}
+		}
+
+		else if (frontOpening && rightOpening)
+		{
+			switch (millis() % 2)
+			{
+
+			case 0:
+				return NO_TURN;
+			case 1:
+				// turn right;
+				return RIGHT;
+			}
+		}
+		else if (!frontOpening && !leftOpening && !rightOpening)
+			return BACK;
+
+		else
+			return NO_TURN;
+}
