@@ -30,7 +30,7 @@ class MazeClass
 	 Dir curDirection;
 	 Dir nextDirection;
 	 double curDistance;
-
+	 bool mapFlag;
 	 int counter;
 	 QueueList<Coordinate> realPath;
 
@@ -54,6 +54,11 @@ class MazeClass
 	 String printPath();
 
 	 String printFloodFill();
+
+	 void testMaze();
+	 void simpleFill();
+	 void simpleMap();
+
 };
 
 

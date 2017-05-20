@@ -37,7 +37,7 @@ long MovementClass::getEncoderReading(const Turn& side)
 
 float MovementClass::getDistanceTravel()   // get total distance travel
 {
-	distance = ((left_encoder.read() + right_encoder.read())/2.0) * WHEEL_CIRCUMFERENCE / 5760.0 *30/29.0;
+	distance = ((left_encoder.read() + right_encoder.read())/2.0) * WHEEL_CIRCUMFERENCE / 5760.0 *30.35/29.0;
 	return distance;
 }
 
@@ -91,16 +91,26 @@ void MovementClass::goForwardCell(const int &a) //go foward num cell
 void MovementClass::stopForward()
 {
 	int initial = left_encoder.read() + right_encoder.read();
-	int current = left_encoder.read() + right_encoder.read();
-	int dt = 100;
-	while(current + 1000  > initial )
+	int current = initial;
+	int dt = 1000;
+	int lastError = 0;
+	int kp = 1;
+	int kd = 1;
+	int minSpeed = 60;
+	elapsedMillis lim = 0;
+	elapsedMicros interval = 0;
+	while (lim < 200 && (current -50 < initial || current + 50 > initial) )
 	{
-		current = left_encoder.read() + right_encoder.read();
-		goBackward(750, 750);// kp*speed, kp*speed);
+		int error = kp*(current - initial) + kd* (error - lastError) * interval;
+		lastError = error;
+		if(error > 0)
+		goBackward(error + minSpeed, error + minSpeed);
+		else goForward(-error + minSpeed, -error + minSpeed);
 		delayMicroseconds(dt);
+		current = left_encoder.read() + right_encoder.read();
 	}
 	goForward(0, 0);
-	delay(150);
+
 }
 
 void MovementClass::stop()

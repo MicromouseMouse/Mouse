@@ -25,7 +25,7 @@ volatile bool modeLeft = false;
 volatile bool modeRight = false;
 
 const int ledTime = 10; //microsecond
-const int baseSpeed = 125;
+const int baseSpeed = 150;
 
 LedClass led;
 MovementClass move(baseSpeed);
@@ -41,7 +41,7 @@ void testStraight(const PID_MODE& A, char m);
 
 void setup()
 {
-	delay(7000);
+	delay(5000);
 	bluetooth.begin(9600);
 	Serial.begin(9600);
 	led.init();
@@ -127,17 +127,20 @@ void testOneWay(const PID_MODE &A)
 {
 	speed = 0;
 	float extraSpace = 0;
+	move.resetEncoder();
 	while (true)
 	{ 
 		maze.mapping();
-		extraSpace = 0;
-		if (speed > 2000) speed = 2000;
+		maze.command();
+		extraSpace = speed;
+		if (speed > 4000) speed = 4000;
 		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.75 - extraSpace)
 		{
 			move.stopForward();
-			//bluetooth.println(maze.printMap());
-			//bluetooth.println(maze.printPath());
-			//bluetooth.println(maze.printFloodFill());
+			bluetooth.println(move.getDistanceTravel(), 3);
+			bluetooth.println(maze.printMap());
+			bluetooth.println(maze.printPath());
+			bluetooth.println(maze.printFloodFill());
 			delay(2000);
 			pid.turnFlag = true;
 			maze.counter = 1;
