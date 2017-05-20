@@ -33,15 +33,13 @@ PIDClass pid(&move, &led, time);
 MazeClass maze(&led, &move);
 SoftwareSerial bluetooth(7, 8);
 
-const int frontWallThreshold = 17500;
 void testLed();
 void testEncoder();
 void testMotor();
-void testStraight(const PID_MODE& A, char m);
 
 void setup()
 {
-	delay(5000);
+	delay(15000);
 	bluetooth.begin(9600);
 	Serial.begin(9600);
 	led.init();
@@ -49,9 +47,11 @@ void setup()
 	move.resetEncoder();
 	led.leftMiddleThreshold = 4000;
 	led.rightMiddleThreshold = 4000;
+	maze.floodFill(Coordinate(8, 8));
+	led.measure(ledTime);
 	control = 0;
 	time = 0;
-	led.measure(ledTime);
+	
 	//move.goForward();
 }
 
@@ -66,81 +66,78 @@ void loop()
 	//testRealMaze(LED_MODE);
 }
 
-void testRealMaze(const PID_MODE &A)
-{
-	speed = 0;
-	float extraSpace = 0;
-	while (true)
-	{ 
-		maze.mapping();
-		extraSpace = speed * 4.5;
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold - extraSpace)
-		{
-			move.stopForward();
-			maze.counter = 1;
-			led.measure(ledTime);
-			//maze.updateMap();
-			//maze.floodFill(Coordinate(8, 8));
-			//maze.command();
-			
-			move.baseSpeed = baseSpeed;
-			delay(500);
-			speed = 0;
-			continue;
-		}
-
-
-		if (control > 500)
-		{
-			ledFlag = true;
-			PIDFlag = true;
-			control = 0;
-		}
-		else if (control > 330)
-		{
-			ledFlag = true;
-		}
-
-		if (ledFlag)
-		{
-			led.measure(ledTime);
-			ledFlag = false;
-		}
-
-		if (PIDFlag)
-		{
-			pid.PID(A);
-			PIDFlag = false;
-		}
-	}
-}
 
 
 void testSolving()
 {
-	maze.floodFill(Coordinate(8,8));
-	//maze.command();
+	Serial.println(maze.printFloodFill());
 	delay(10000);
+	while (true)
+	{
+		maze.mapping();
+		if (move.getDistanceTravel() > 18 * maze.counter - 1.2)
+		{
+			
+			maze.counter++;
+			Coordinate next = maze.realPath.pop();
+			Serial.print(maze.curLocation.x);
+			Serial.print(" ");
+			Serial.print(maze.curLocation.y);
+			Serial.print("   ");
+			Serial.print(next.x);
+			Serial.print(" ");
+			Serial.println(next.y);
+			Dir temp = getDirToGo(maze.curLocation, next);
+			if (temp == maze.curDirection) return;
+			else
+			{
+			
+				Serial.print(maze.getTurnDir(temp));
+				maze.curDirection = temp;
+				Serial.print(maze.curDirection);
+			}
+		}
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.9)
+		{
+			digitalWrite(14, HIGH);
+			move.resetEncoder();
+			maze.counter = 1;
+		}
+		
+	}
+
+	//maze.command();
+	delay(500);
 }
 
 void testOneWay(const PID_MODE &A)
 {
+
 	speed = 0;
 	float extraSpace = 0;
 	move.resetEncoder();
 	while (true)
 	{ 
+		//maze.randomMapping();
 		maze.mapping();
+		//maze.simpleTravel();
 		maze.command();
-		extraSpace = speed;
+		//extraSpace = 2*speed;
 		if (speed > 4000) speed = 4000;
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.75 - extraSpace)
+		led.measure(ledTime);
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.65 - extraSpace)
 		{
 			move.stopForward();
-			bluetooth.println(move.getDistanceTravel(), 3);
-			bluetooth.println(maze.printMap());
-			bluetooth.println(maze.printPath());
-			bluetooth.println(maze.printFloodFill());
+			led.measure(ledTime);
+			move.turn_encoder(maze.determineRandomMotion());
+			move.resetEncoder();
+			move.goForward();
+			//bluetooth.println(move.getDistanceTravel(), 3);
+			//bluetooth.println(maze.printMap());
+			//bluetooth.println(maze.printPath());
+			//bluetooth.println(maze.printFloodFill());
+
+			/*
 			delay(2000);
 			pid.turnFlag = true;
 			maze.counter = 1;
@@ -149,46 +146,34 @@ void testOneWay(const PID_MODE &A)
 			{
 				move.turn_encoder(LEFT);
 				maze.curDirection = leftDir(maze.curDirection);
-				led.measure(ledTime);
 			}
 			else if (led.getLed(RIGHT_DIAGONAL) < 0.5*led.rightThreshold)
 			{
 				move.turn_encoder(RIGHT);
 				maze.curDirection = rightDir(maze.curDirection);
-				led.measure(ledTime);
 			}
 			else
 			{
 				move.turn_encoder(BACK);
 				maze.curDirection = opposite(maze.curDirection);
-				led.measure(ledTime);
 			}
-			move.baseSpeed = baseSpeed;
-			delay(500);
+			delay(200);
+			*/
+			led.measure(ledTime);
 			speed = 0;
-			continue;
+			pid.PID(A);
 		}
 		
 		
-		if (control > 3000)
+		if (control > 1000)
 		{
-			ledFlag = true;
 			PIDFlag = true;
 			control = 0;
-		}
-		else if (control > 330)
-		{
-			ledFlag = true;
-		}
-
-		if (ledFlag)
-		{
-			led.measure(ledTime);
-			ledFlag = false;
 		}
 
 		if (PIDFlag)
 		{
+			led.measure(ledTime);
 			pid.PID(A);
 			PIDFlag = false;
 		}
@@ -201,7 +186,7 @@ void testLed()
 
 	{
 		led.measure(ledTime);
-		/*
+		
 		Serial.print("");
 		Serial.print(led.getLed(LEFT_REAR), DEC);
 		Serial.print("  ");
@@ -215,8 +200,8 @@ void testLed()
 		Serial.print("  ");
 		Serial.print(led.getLed(RIGHT_REAR), DEC);
 		Serial.println("\n");
-		*/
 		
+		/*
 		bluetooth.println("test");
 		bluetooth.print("");
 		bluetooth.print(led.getLed(LEFT_REAR));//, DEC);
@@ -231,11 +216,10 @@ void testLed()
 		bluetooth.print("  ");
 		bluetooth.print(led.getLed(RIGHT_REAR));//, DEC);
 		bluetooth.println("\n");
-		delay(500);
-		
-		//bluetooth.println("test");
 		delay(100);
-
+		
+		//bluetooth.println("test");;
+		*/
 	}
 }
 
@@ -284,61 +268,5 @@ void testEncoder()
 			positionRight = newRight;
 		}
 
-	}
-}
-
-void testStraight(const PID_MODE& A, char m)
-{
-	while (true)
-	{
-		switch (m)
-		{
-		case 'b':
-			bluetooth.print(led.getLed(LEFT_DIAGONAL));
-			bluetooth.print(" ");
-			bluetooth.println(led.getLed(RIGHT_DIAGONAL));
-			//bluetooth.print("Left = ");
-			//bluetooth.print(move.left_encoder.read());
-			//bluetooth.print(", Right = ");
-			//bluetooth.println(move.right_encoder.read());
-			//bluetooth.print(move.currentSpeedLeft);
-			//bluetooth.print(" ");
-			//bluetooth.println(move.currentSpeedRight);
-			break;
-		case 's':
-			Serial.print("Left = ");
-			Serial.print(move.left_encoder.read());
-			Serial.print(", Right = ");
-			Serial.println(move.right_encoder.read());
-			break;
-		default:
-			break;
-		}
-		
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > frontWallThreshold)
-		{
-		move.stop();
-		break;
-		}
-		
-
-		if (control > 1000)
-		{
-			ledFlag = true;
-			PIDFlag = true;
-			control = 0;
-		}
-
-		if (ledFlag)
-		{
-			led.measure(ledTime);
-			ledFlag = false;
-		}
-
-		if (PIDFlag)
-		{
-			pid.PID(A);
-			PIDFlag = false;
-		}
 	}
 }

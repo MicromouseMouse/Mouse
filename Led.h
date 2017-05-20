@@ -38,11 +38,6 @@ public:
 
 	int offsetLed;
 	
-
-	bool wallFront;
-	bool wallLeft;
-	bool wallRight;
-	
 	int leftThreshold;
 	int rightThreshold;
 	int frontThreshold;

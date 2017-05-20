@@ -42,19 +42,19 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 	{
 	case LED_MODE:
 		
-		if ((leftF > led->leftMiddleThreshold*0.75 && leftD > led->leftThreshold*0.75)
-			&& (rightF > led->rightMiddleThreshold*0.75 && rightD > led->rightThreshold*0.75)
+		if ((leftF > led->leftMiddleThreshold*0.6 && leftD > led->leftThreshold*0.75)
+			&& (rightF > led->rightMiddleThreshold*0.6 && rightD > led->rightThreshold*0.75)
 			&& turnFlag == false) // wall both side
 		{
 		error = leftD - rightD - led->offsetLed;
 		}
-		else if (leftF > led->leftMiddleThreshold*0.75 && leftD > led->leftThreshold*0.75) //wall left
+		else if (leftF > led->leftMiddleThreshold*0.85 && leftD > led->leftThreshold*0.8) //wall left
 		{
-			error = leftD - led->leftThreshold +5000;//-200;
+			error = leftD - led->leftThreshold - 1000;//-200;
 		}
-		else if (rightF > led->rightMiddleThreshold*0.75 && rightD > led->rightThreshold*0.75)  //wall right
+		else if (rightF > led->rightMiddleThreshold*0.85 && rightD > led->rightThreshold*0.8)  //wall right
 		{
-			error = led->rightThreshold - rightD -5000;//+1000;
+			error = led->rightThreshold - rightD + 1000;//+1000;
 		}
 		else
 		{
@@ -67,9 +67,9 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 		return;
 		}	// no wall will switch to encoder
 		
-
-		//error = led->rightThreshold- rightD;
-		//error = leftD - led->leftThreshold;
+		
+		//error = led->rightThreshold- rightD + 1000;
+		//error =  leftD - led->leftThreshold  - 1000;
 		encoderFlag = false;
 		encoderOffset = 0;
 		pError = Kp_led* error;

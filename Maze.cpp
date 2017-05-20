@@ -5,7 +5,8 @@
 #include "Led.h"
 //#include "Movement.h"
 #include <SoftwareSerial.h>
-
+#include <cstring>
+#include <cstdlib>
 
 SoftwareSerial bt(7, 8);
 
@@ -32,12 +33,13 @@ const int centery3 = 7;
 const int centerx4 = 8;
 const int centery4 = 8;
 
-void MazeClass::testMaze()
+void MazeClass::simpleFill()
 {
 	mazeCoordinate center1(centerx, centery);
 	mazeCoordinate center2(centerx2, centery2);
 	mazeCoordinate center3(centerx3, centery2);
 	mazeCoordinate center4(centerx4, centery4);
+
 	int temp1[SIZEX][SIZEY];
 	int temp2[SIZEX][SIZEY];
 
@@ -49,6 +51,7 @@ void MazeClass::testMaze()
 			temp2[j][i] = 0;
 		}
 	}
+
 
 	for (int i = 0; i < SIZEY; i++)
 		for (int j = 0; j < center1.x; j++)
@@ -65,12 +68,55 @@ void MazeClass::testMaze()
 		for (int j = center4.y; j < SIZEY; j++)
 			temp2[i][j] = absolute(center4.y - j);
 
+	
 	for (int i = 0; i < SIZEY; i++)
 		for (int j = 0; j < SIZEX; j++)
 			path[j][i] = temp1[j][i] + temp2[j][i];
-
-
 }
+
+void MazeClass::simpleTravel()
+{
+	if (move->getDistanceTravel() < 18.0*counter - 1.15)
+		return;
+	mapFlag = false;
+	int x = curLocation.x;
+	int y = curLocation.y;
+	int value = path[x][y];
+	QueueList<Coordinate> holder;
+	for (int i = 0; i < 3; i++)
+	{
+		Coordinate next = getCellDir(curLocation, (Dir)i);
+		if (next == NULL_COORD) continue;
+		else holder.push(next);
+	}
+	Coordinate final = holder.pop();
+	while (!holder.isEmpty())
+	{
+		Coordinate temp = holder.pop();
+		if ((path[temp.x][temp.y] < path[final.x][final.y]) 
+			|| (( path[temp.x][temp.y] == path[final.x][final.y]) && getDir(curLocation,temp) == curDirection))
+		{
+			final = temp;
+		}
+	}
+
+	Dir tempDir = getDirToGo(curLocation, final);
+	if (tempDir == curDirection) {
+		counter++;
+		return;
+	}
+	else
+	{
+		move->stopForward();
+		delay(100);
+		move->turn_encoder(getTurnDir(tempDir));
+		curDirection = tempDir;
+		move->goForward();
+	}
+	counter = 1;
+	move->resetEncoder();
+}
+
 MazeClass::MazeClass(LedClass* a, MovementClass* b)
 {
 	mapFlag = false;
@@ -109,15 +155,16 @@ MazeClass::MazeClass(LedClass* a, MovementClass* b)
 
 void MazeClass::updateMap()
 {
+	
 	bool front = (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > 6000);
 	bool left =  led->left_diagonal > led->leftThreshold*0.5;
-	bool right = led->right_diagonal > led->rightThreshold*0.85;
+	bool right = led->right_diagonal > led->rightThreshold*0.5;
 
 	switch (curDirection)
 	{
 	case NORTH:
 		curLocation = Coordinate(curLocation.x, curLocation.y + 1);
-		if (maze[curLocation.x][curLocation.y].visited == true) break;
+		if (maze[curLocation.x][curLocation.y].visited == true) return;
 		maze[curLocation.x][curLocation.y].wallNorth = front;
 		maze[curLocation.x][curLocation.y].wallEast = right;
 		maze[curLocation.x][curLocation.y].wallWest = left;
@@ -133,7 +180,7 @@ void MazeClass::updateMap()
 		break;
 	case SOUTH:
 		curLocation = Coordinate(curLocation.x, curLocation.y - 1);
-		if (maze[curLocation.x][curLocation.y].visited == true) break;
+		if (maze[curLocation.x][curLocation.y].visited == true) return;
 		maze[curLocation.x][curLocation.y].wallSouth = front;
 		maze[curLocation.x][curLocation.y].wallWest = right;
 		maze[curLocation.x][curLocation.y].wallEast = left;
@@ -149,7 +196,7 @@ void MazeClass::updateMap()
 		break;
 	case EAST:
 		curLocation = Coordinate(curLocation.x + 1, curLocation.y);
-		if (maze[curLocation.x][curLocation.y].visited == true) break;
+		if (maze[curLocation.x][curLocation.y].visited == true) return;
 		maze[curLocation.x][curLocation.y].wallEast = front;
 		maze[curLocation.x][curLocation.y].wallSouth = right;
 		maze[curLocation.x][curLocation.y].wallNorth = left;
@@ -168,7 +215,7 @@ void MazeClass::updateMap()
 		break;
 	case WEST:
 		curLocation = Coordinate(curLocation.x - 1, curLocation.y);
-		if (maze[curLocation.x][curLocation.y].visited == true) break;
+		if (maze[curLocation.x][curLocation.y].visited == true) return;
 		maze[curLocation.x][curLocation.y].wallWest = front;
 		maze[curLocation.x][curLocation.y].wallNorth = right;
 		maze[curLocation.x][curLocation.y].wallSouth = left;
@@ -188,11 +235,14 @@ void MazeClass::updateMap()
 	default:
 		exit(1);
 	}
+	
+	floodFill(Coordinate(8, 8));
+
 }
 
 void MazeClass::mapping()
 {
-	if (move->getDistanceTravel() > 18.0*counter - 7 && mapFlag == false)
+	if (move->getDistanceTravel() > 18.0*counter - 5 && mapFlag == false)
 	{
 		mapFlag = true;
 		updateMap();
@@ -229,6 +279,7 @@ String MazeClass::printMap()
 String MazeClass::printPath()
 {
 	String s = "";
+	QueueList<Coordinate> temp;
 	while (!realPath.isEmpty())
 	{
 		Coordinate check = realPath.peek();
@@ -237,7 +288,9 @@ String MazeClass::printPath()
 		s += " ";
 		s += check.y;
 		s += "\n";
+		temp.push(check);
 	}
+	realPath = temp;
 	return s;
 }
 
@@ -260,58 +313,56 @@ String MazeClass::printFloodFill()
 
 void MazeClass::floodFill(const Coordinate &end)
 {
-
-
 	QueueList<MazeCount> way;
 	way.push(MazeCount(curLocation, 0));
 	bool checked[SIZE][SIZE];
-	for (int i = 0; i < SIZE; i++)
-	{
-		for (int j = 0; j < SIZE; j++)
-		{
-			checked[i][j] = false;
-			path[i][j] = 0;
-		}
-	}
+	memset(path, 0, sizeof(path[0][0]) * SIZE*SIZE);
+	memset(checked, 0, sizeof(checked[0][0]) * SIZE*SIZE);
+	
 	checked[curLocation.x][curLocation.y] = true;
+	
 	while (!way.isEmpty())
 	{
 		MazeCount temp = way.peek();
 		way.pop();
-		path[temp.current.x][temp.current.y] = temp.count;
+		int x = temp.current.x;
+		int y = temp.current.y;
+		int cost = temp.count;
+		path[x][y] = temp.count;
 
-		if (temp.current.y < SIZE - 1 && temp.current.y >= 0									//check North
-			&& maze[temp.current.x][temp.current.y].wallNorth == false
-			&& checked[temp.current.x][temp.current.y + 1] == false)
+		if (y < SIZE - 1 && y >= 0									//check North
+			&& maze[x][y].wallNorth == false
+			&& checked[x][y + 1] == false)
 		{
-			way.push(MazeCount(Coordinate(temp.current.x, temp.current.y + 1), temp.count + 1));
-			checked[temp.current.x][temp.current.y + 1] = true;
+			way.push(MazeCount(Coordinate(x, y + 1), cost + 1));
+			checked[x][y + 1] = true;
 		}
 
-		if (temp.current.x < SIZE - 1 && temp.current.x >= 0					//check East
-			&& maze[temp.current.x][temp.current.y].wallEast == false
-			&& checked[temp.current.x + 1][temp.current.y] == false)
+		if (x < SIZE - 1 && x >= 0					//check East
+			&& maze[x][y].wallEast == false
+			&& checked[x + 1][y] == false)
 		{
-			way.push(MazeCount(Coordinate(temp.current.x + 1, temp.current.y), temp.count + 1));
-			checked[temp.current.x + 1][temp.current.y] = true;
+			way.push(MazeCount(Coordinate(x + 1, y), cost + 1));
+			checked[x + 1][y] = true;
 		}
 
-		if (temp.current.y > 0 && temp.current.y < SIZE											//check South
-			&& maze[temp.current.x][temp.current.y].wallSouth == false
-			&& checked[temp.current.x][temp.current.y - 1] == false)
+		if (y > 0 && y < SIZE											//check South
+			&& maze[x][y].wallSouth == false
+			&& checked[x][y - 1] == false)
 		{
-			way.push(MazeCount(Coordinate(temp.current.x, temp.current.y - 1), temp.count + 1));
-			checked[temp.current.x][temp.current.y - 1] = true;
+			way.push(MazeCount(Coordinate(x, y - 1), cost + 1));
+			checked[x][y - 1] = true;
 		}
 
-		if (temp.current.x > 0 && temp.current.x < SIZE		//check West
-			&& maze[temp.current.x][temp.current.y].wallWest == false
-			&& checked[temp.current.x - 1][temp.current.y] == false)
+		if (x > 0 && x < SIZE		//check West
+			&& maze[x][y].wallWest == false
+			&& checked[x - 1][y] == false)
 		{
-			way.push(MazeCount(Coordinate(temp.current.x - 1, temp.current.y), temp.count + 1));
-			checked[temp.current.x - 1][temp.current.y] = true;
+			way.push(MazeCount(Coordinate(x - 1, y), cost + 1));
+			checked[x - 1][y] = true;
 		}
 	}
+	
 	if (curLocation.x >= SIZE || curLocation.x < 0 || curLocation.y < 0 || curLocation.y >= SIZE)
 	{
 		analogWrite(13, 1023);
@@ -319,19 +370,11 @@ void MazeClass::floodFill(const Coordinate &end)
 		return;
 	}
 
-	for (int i = 0; i < SIZE; i++)
-	{
-		for (int j = 0; j < SIZE; j++)
-		{
-			checked[i][j] = false;
-		}
-	}
-
+	memset(checked, 0, sizeof(checked[0][0]) * SIZE*SIZE);
 	while (!realPath.isEmpty())
 	{
 		realPath.pop();
 	}
-	
 	Coordinate find = curLocation;
 	Dir psuDir = curDirection;
 	int step = 0;
@@ -339,20 +382,27 @@ void MazeClass::floodFill(const Coordinate &end)
 	{
 		StackList<Coordinate> shortest;
 		++step;
-		if (step > 260)
+		for (int i = 0; i < 3; i++)
 		{
-			move->stop();
-			continue;
-		}
-		if (find.x > 0 && find.x <SIZE)  // check WEST
-		{
-			Coordinate next = getCellDir(find, WEST);
-			if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
+			Coordinate next = getCellDir(find, (Dir)i);
+			if (next == NULL_COORD) continue;
+			else if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
 			{
 				shortest.push(next);
 				checked[next.x][next.y] = true;
 			}
 		}
+
+		/*
+		if (find.x > 0 && find.x <SIZE)  // check WEST
+		{
+		Coordinate next = getCellDir(find, WEST);
+		if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
+		{
+		shortest.push(next);
+		checked[next.x][next.y] = true;
+		}
+		
 		if (find.y < SIZE - 1 && find.y >=0)  // check NORTH
 		{
 			Coordinate next = getCellDir(find, NORTH);
@@ -380,6 +430,7 @@ void MazeClass::floodFill(const Coordinate &end)
 				checked[next.x][next.y] = true;
 			}
 		}
+		*/
 		if (shortest.isEmpty())
 		{
 			digitalWrite(13, HIGH);
@@ -387,20 +438,14 @@ void MazeClass::floodFill(const Coordinate &end)
 		}
 
 		Coordinate final = shortest.peek();
-		int bug = 0;
 		do
 		{
-			bug++;
-			if (bug > 500)
-			{
-				move->stop();
-				continue;
-			}
 			Coordinate compare = shortest.peek();
 			shortest.pop();
 			int dis1 = shortestDistance(compare, end);
 			int dis2 = shortestDistance(final, end);
-			if (dis1 < dis2 || (dis1 == dis2 && getDirToGo(find, compare) == psuDir) || compare == end || final == end) // if less or equal but straight
+			if (final == end) break;
+			else if (dis1 < dis2 || (dis1 == dis2 && getDirToGo(find, compare) == psuDir) || compare == end) // if less or equal but straight
 			{
 				final = compare;
 			}
@@ -412,6 +457,7 @@ void MazeClass::floodFill(const Coordinate &end)
 		find = final;
 		
 	}
+	
 }
 
 Turn MazeClass::getTurnDir(const Dir &next)
@@ -433,149 +479,130 @@ Turn MazeClass::getTurnDir(const Dir &next)
 
 void MazeClass::command()
 {
-	if (move->getDistanceTravel() < 18.0*counter - 1.25) 
+	if (move->getDistanceTravel() < 18.0*counter - 1.1) 
 	return;
-	++counter;
-	move->stopForward();
+	//move->stopForward();
+	//move->resetEncoder();
 	mapFlag = false;
-	delay(500);
-	move->resetEncoder();
-	return;
-	if (realPath.isEmpty()) move->stopForward();
+	++counter;
 
-	Coordinate next = realPath.peek();
-	realPath.pop();
+	if (realPath.isEmpty())
+	{
+		move->stopForward();
+		return;
+	}
+
+	Coordinate next = realPath.pop();
 	Dir temp = getDirToGo(curLocation, next);
 	if (temp == curDirection) return;
 	else
 	{
-		
 		move->stopForward();
+		bt.print(next.x);
+		bt.print(" ");
+		bt.println(next.y);
+		delay(100);
 		move->turn_encoder(getTurnDir(temp));
 		curDirection = temp;
 		move->goForward();
 	}
 }
 
-void MazeClass::simpleMap()
-{
-	if (move->getDistanceTravel() < 18.0*counter - 9 && mapFlag == false)
-	{
-		mapFlag = true;
-		//front = (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > led->frontThreshold *0.6);
-		//left = led->left_diagonal > led->leftThreshold*0.6;
-		//right = led->right_diagonal > led->rightThreshold*0.6;
-	}
-}
-
-void MazeClass::simpleFill()
-{
-	
-	if (move->getDistanceTravel() < 18.0*counter) return;
-	++counter;
-	mapFlag = false;
-
-	Coordinate next = realPath.peek();
-	realPath.pop();
-	Dir temp = getDirToGo(curLocation, next);
-	if (temp == curDirection) return;
-	else
-	{
-
-		move->stopForward();
-		move->turn_encoder(getTurnDir(temp));
-		curDirection = temp;
-		move->goForward();
-	}
-}
 
 void MazeClass::randomMapping()
 {
-	if (move->getDistanceTravel() < 18.0*counter - 1.25)
+	if (move->getDistanceTravel() < 18.0*counter - 3)
 		return;
-	move->stopForward();
-	//delay(500);
-	
-
+	//move->stopForward();
 	Turn randomDirection = determineRandomMotion();
 	switch (randomDirection)
 	{
 	case NO_TURN:
+		++counter;
 		return;
 	case LEFT:
+		move->stopForward();
 		move->turn_encoder(LEFT);
-		return;
+		break;
 	case RIGHT:
+		move->stopForward();
 		move->turn_encoder(RIGHT);
-		return;
+		break;
 	case BACK:
+		move->stopForward();
 		move->turn_encoder(BACK);
+		break;
 	}
+	counter = 1;
 	move->resetEncoder();
 
 }
 
 Turn MazeClass::determineRandomMotion()
 {
-		bool leftOpening = led->getLed(LEFT_DIAGONAL) < led->leftThreshold;
-		bool rightOpening = led->getLed(RIGHT_DIAGONAL) < led->rightThreshold;
-		bool frontOpening = led->getLed(RIGHT_REAR) + led->getLed(LEFT_REAR) < led->frontThreshold;
-		if (leftOpening && rightOpening && frontOpening)
+	led->measure(10);
+	bool leftOpening = led->getLed(LEFT_DIAGONAL) < led->leftThreshold*0.7;
+	bool rightOpening = led->getLed(RIGHT_DIAGONAL) < led->rightThreshold*0.7;
+	bool frontOpening = led->getLed(RIGHT_REAR) + led->getLed(LEFT_REAR) < led->frontThreshold*0.6;
+	if (leftOpening && rightOpening && frontOpening)
+	{
+		switch (led->right_rear % 3)
 		{
-			switch (millis() % 3)
-			{
-			case 0:
-				return NO_TURN;
-				break;
-			case 1:
-				// turn left;
-				return LEFT;
-				break;
-			case 2:
-				// turn left;
-				return RIGHT;
-			}
-		}
-
-		else if (leftOpening && frontOpening)
-		{
-			switch (millis() % 2)
-			{
-			case 0:
-				return NO_TURN;
-			case 1:
-				// turn left;
-				return LEFT;
-			}
-		}
-
-		else if (leftOpening && rightOpening)
-		{
-			switch (millis() % 2)
-			{
-			case 0:
-				return NO_TURN;
-			case 1:
-				// turn left;
-				return RIGHT;
-			}
-		}
-
-		else if (frontOpening && rightOpening)
-		{
-			switch (millis() % 2)
-			{
-
-			case 0:
-				return NO_TURN;
-			case 1:
-				// turn right;
-				return RIGHT;
-			}
-		}
-		else if (!frontOpening && !leftOpening && !rightOpening)
-			return BACK;
-
-		else
+		case 0:
 			return NO_TURN;
+		case 1:
+			// turn left;
+			return LEFT;
+		case 2:
+			// turn left;
+			return RIGHT;
+		}
+	}
+
+	else if (leftOpening && frontOpening)
+	{
+		switch (led->left_rear % 2)
+		{
+		case 0:
+			return NO_TURN;
+		case 1:
+			// turn left;
+			return LEFT;
+		}
+	}
+
+	else if (leftOpening && rightOpening)
+	{
+		switch (led->left_diagonal % 2)
+		{
+		case 0:
+			return LEFT;
+		case 1:
+			// turn left;
+			return RIGHT;
+		}
+	}
+
+	else if (frontOpening && rightOpening)
+	{	
+		switch (led->right_diagonal % 2)
+		{
+
+		case 0:
+			return NO_TURN;
+		case 1:
+			// turn right;
+			return RIGHT;
+		}
+	}
+	else if (!frontOpening && !leftOpening && !rightOpening)
+		return BACK;
+
+	else if (leftOpening)
+		return LEFT;
+	else if (rightOpening)
+		return RIGHT;
+	else 
+		return NO_TURN;
+
 }

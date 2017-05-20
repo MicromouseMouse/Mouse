@@ -23,9 +23,6 @@ LedClass::LedClass()
 	right_middle = 0;
 	right_diagonal = 0;
 
-	wallFront = false;
-	wallLeft = true;
-	wallRight = true;
 }
 
 void LedClass::init()
@@ -81,13 +78,4 @@ void LedClass::measure(const unsigned int &time)
 	right_middle = analogRead(RIGHT_MIDDLE_RECEIVER);
 
 	digitalWrite(MIDDLE_LED, LOW);
-
-	if (left_diagonal <= WALL_LEFT) wallLeft = false;
-	else wallLeft = true;
-
-	if (right_diagonal <= WALL_RIGHT) wallRight = false;
-	else wallRight = true;
-
-	if ((left_rear + right_rear) <= WALL_FRONT) wallFront = false;
-	else wallFront = true;
 }

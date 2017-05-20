@@ -37,7 +37,7 @@ long MovementClass::getEncoderReading(const Turn& side)
 
 float MovementClass::getDistanceTravel()   // get total distance travel
 {
-	distance = ((left_encoder.read() + right_encoder.read())/2.0) * WHEEL_CIRCUMFERENCE / 5760.0 *30.35/29.0;
+	distance = ((left_encoder.read() + right_encoder.read())/2.0) * WHEEL_CIRCUMFERENCE / 5760.0 *31/29.0;
 	return distance;
 }
 
@@ -93,19 +93,20 @@ void MovementClass::stopForward()
 	int initial = left_encoder.read() + right_encoder.read();
 	int current = initial;
 	int dt = 1000;
-	int lastError = 0;
+	int lastErr= 0;
 	int kp = 1;
 	int kd = 1;
 	int minSpeed = 60;
+	int err = 0;
 	elapsedMillis lim = 0;
 	elapsedMicros interval = 0;
 	while (lim < 200 && (current -50 < initial || current + 50 > initial) )
 	{
-		int error = kp*(current - initial) + kd* (error - lastError) * interval;
-		lastError = error;
-		if(error > 0)
-		goBackward(error + minSpeed, error + minSpeed);
-		else goForward(-error + minSpeed, -error + minSpeed);
+		err = kp*(current - initial) + kd* (err - lastErr) * interval;
+		lastErr = err;
+		if(err > 0)
+		goBackward(err + minSpeed, err + minSpeed);
+		else goForward(-err + minSpeed, -err + minSpeed);
 		delayMicroseconds(dt);
 		current = left_encoder.read() + right_encoder.read();
 	}
@@ -256,6 +257,8 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 			limit = 1000;
 			error = (2 * QUARTER_TURN_DISTANCE - (left_encoder.read() - right_encoder.read()));
 			turnSpeed = absolute(error) / (2.0*QUARTER_TURN_DISTANCE) * 100 + 130;
+			break;
+		case NO_TURN:
 			break;
 		default:
 			exit(1);

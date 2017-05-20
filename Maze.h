@@ -11,8 +11,8 @@
 
 #include "Map.h"
 #include "Movement.h"
-#include <StackList.h>
-#include <QueueList.h>
+#include <StackList\StackList\StackList.h>
+#include <QueueList\QueueList.h>
 
 enum Turn;
 
@@ -55,12 +55,12 @@ class MazeClass
 
 	 String printFloodFill();
 
-	 void testMaze();
-	 void simpleFill();
-	 void simpleMap();
+	
 	 Turn determineRandomMotion();
 	 void randomMapping();
 
+	 void simpleFill();
+	 void simpleTravel();
 };
 
 
