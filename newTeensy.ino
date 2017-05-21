@@ -39,7 +39,7 @@ void testMotor();
 
 void setup()
 {
-	delay(15000);
+	delay(12000);
 	bluetooth.begin(9600);
 	Serial.begin(9600);
 	led.init();
@@ -47,7 +47,6 @@ void setup()
 	move.resetEncoder();
 	led.leftMiddleThreshold = 4000;
 	led.rightMiddleThreshold = 4000;
-	maze.floodFill(Coordinate(8, 8));
 	led.measure(ledTime);
 	control = 0;
 	time = 0;
@@ -79,7 +78,7 @@ void testSolving()
 		{
 			
 			maze.counter++;
-			Coordinate next = maze.realPath.pop();
+			Coordinate next = maze.pastPath.pop();
 			Serial.print(maze.curLocation.x);
 			Serial.print(" ");
 			Serial.print(maze.curLocation.y);
@@ -120,23 +119,59 @@ void testOneWay(const PID_MODE &A)
 	{ 
 		//maze.randomMapping();
 		maze.mapping();
-		//maze.simpleTravel();
-		maze.command();
+		int check = maze.command();
+		if(check == -1) maze.command();
+		else if (check == 1)
+		{
+			delay(1000);
+			bluetooth.println(maze.printFloodFill());
+			delay(1000);
+		}
+		
+		
 		//extraSpace = 2*speed;
-		if (speed > 4000) speed = 4000;
+		//if (speed > 4000) speed = 4000;
 		led.measure(ledTime);
 		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.65 - extraSpace)
 		{
 			move.stopForward();
 			led.measure(ledTime);
-			move.turn_encoder(maze.determineRandomMotion());
+			move.turn_encoder(RIGHT);
 			move.resetEncoder();
-			move.goForward();
+			led.measure(ledTime);
+			delay(1000);
+			//move.goForward();
 			//bluetooth.println(move.getDistanceTravel(), 3);
 			//bluetooth.println(maze.printMap());
 			//bluetooth.println(maze.printPath());
 			//bluetooth.println(maze.printFloodFill());
-
+			/*
+			//maze.simpleTravel();
+		if (false)//maze.command() && maze.curLocation == Coordinate(0,9))
+		{
+			move.stop();
+			bluetooth.print(maze.curLocation.x);
+			bluetooth.print(" ");
+			bluetooth.println(maze.curLocation.y);
+			bluetooth.print("  ");
+			bluetooth.print(maze.curDirection);
+			bluetooth.print("    ");
+			bluetooth.print(maze.nextLocation.x);
+			bluetooth.print(" ");
+			bluetooth.println(maze.nextLocation.y);
+			bluetooth.println(maze.printMap());
+			bluetooth.println(maze.printFloodFill());
+			bluetooth.println(maze.printPath());
+			move.resetEncoder();
+			bluetooth.println(move.getDistanceTravel(), 3);
+			delay(5000);
+			move.stop();
+			pid.turnFlag = true;
+			maze.counter = 1;
+			led.measure(ledTime);
+			pid.PID(A);
+			
+		}*/
 			/*
 			delay(2000);
 			pid.turnFlag = true;
@@ -159,9 +194,9 @@ void testOneWay(const PID_MODE &A)
 			}
 			delay(200);
 			*/
-			led.measure(ledTime);
-			speed = 0;
-			pid.PID(A);
+			//led.measure(ledTime);
+			//speed = 0;
+			//pid.PID(A);
 		}
 		
 		

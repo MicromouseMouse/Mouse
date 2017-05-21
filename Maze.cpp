@@ -10,6 +10,7 @@
 
 SoftwareSerial bt(7, 8);
 
+
 struct mazeCoordinate
 {
 	int x;
@@ -22,8 +23,7 @@ struct mazeCoordinate
 	}
 };
 
-const int SIZEX = 16;
-const int SIZEY = 16;
+
 const int centerx = 7;
 const int centery = 7;
 const int centerx2 = 8;
@@ -40,12 +40,12 @@ void MazeClass::simpleFill()
 	mazeCoordinate center3(centerx3, centery2);
 	mazeCoordinate center4(centerx4, centery4);
 
-	int temp1[SIZEX][SIZEY];
-	int temp2[SIZEX][SIZEY];
+	int temp1[SIZE][SIZE];
+	int temp2[SIZE][SIZE];
 
-	for (int i = 0; i < SIZEY; i++)
+	for (int i = 0; i < SIZE; i++)
 	{
-		for (int j = 0; j < SIZEX; j++)
+		for (int j = 0; j < SIZE; j++)
 		{
 			temp1[j][i] = 0;
 			temp2[j][i] = 0;
@@ -53,25 +53,26 @@ void MazeClass::simpleFill()
 	}
 
 
-	for (int i = 0; i < SIZEY; i++)
+	for (int i = 0; i < SIZE; i++)
 		for (int j = 0; j < center1.x; j++)
 			temp1[j][i] = absolute(center1.x - j);
-	for (int i = 0; i < SIZEY; i++)
-		for (int j = center2.x; j < SIZEX; j++)
+	for (int i = 0; i < SIZE; i++)
+		for (int j = center2.x; j < SIZE; j++)
 			temp1[j][i] = absolute(center2.x - j);
 
 
-	for (int i = 0; i < SIZEX; i++)
+	for (int i = 0; i < SIZE; i++)
 		for (int j = 0; j < center1.y; j++)
 			temp2[i][j] = absolute(center1.y - j);
-	for (int i = 0; i < SIZEX; i++)
-		for (int j = center4.y; j < SIZEY; j++)
+	for (int i = 0; i < SIZE; i++)
+		for (int j = center4.y; j < SIZE; j++)
 			temp2[i][j] = absolute(center4.y - j);
 
 	
-	for (int i = 0; i < SIZEY; i++)
-		for (int j = 0; j < SIZEX; j++)
+	for (int i = 0; i < SIZE; i++)
+		for (int j = 0; j < SIZE; j++)
 			path[j][i] = temp1[j][i] + temp2[j][i];
+
 }
 
 void MazeClass::simpleTravel()
@@ -148,9 +149,45 @@ MazeClass::MazeClass(LedClass* a, MovementClass* b)
 	//start cell
 	maze[0][0] = Cell(false, true, true, true, true);
 	curLocation = Coordinate(0, 0);
+	nextLocation = Coordinate(0, 1);
+	simpleFill();
 	curDirection = NORTH;
 	nextDirection = NORTH;
 	
+}
+
+bool MazeClass::getWall(const Dir &a)
+{
+	int x = curLocation.x;
+	int y = curLocation.y;
+	switch (a)
+	{
+	case NORTH:
+		return maze[x][y].wallNorth;
+	case EAST:
+		return maze[x][y].wallEast;
+	case SOUTH:
+		return maze[x][y].wallSouth;
+	case WEST:
+		return maze[x][y].wallWest;
+	default:
+		exit(1);
+	}
+}
+
+bool MazeClass::getWallDir(const Turn &a)
+{
+	switch (a)
+	{
+	case LEFT:
+		return getWall(leftDir(curDirection));
+	case RIGHT:
+		return getWall(rightDir(curDirection));
+	case NO_TURN:
+		return getWall(curDirection);
+	default:
+		exit(1);
+	}
 }
 
 void MazeClass::updateMap()
@@ -236,7 +273,7 @@ void MazeClass::updateMap()
 		exit(1);
 	}
 	
-	floodFill(Coordinate(8, 8));
+
 
 }
 
@@ -246,7 +283,6 @@ void MazeClass::mapping()
 	{
 		mapFlag = true;
 		updateMap();
-		floodFill(Coordinate(8,8));
 		//command();
 	}
 }
@@ -279,18 +315,18 @@ String MazeClass::printMap()
 String MazeClass::printPath()
 {
 	String s = "";
-	QueueList<Coordinate> temp;
-	while (!realPath.isEmpty())
+	StackList<Coordinate> temp;
+	while (!pastPath.isEmpty())
 	{
-		Coordinate check = realPath.peek();
-		realPath.pop();
+		Coordinate check = pastPath.peek();
+		pastPath.pop();
 		s += check.x;
 		s += " ";
 		s += check.y;
 		s += "\n";
 		temp.push(check);
 	}
-	realPath = temp;
+	pastPath = temp;
 	return s;
 }
 
@@ -313,151 +349,32 @@ String MazeClass::printFloodFill()
 
 void MazeClass::floodFill(const Coordinate &end)
 {
-	QueueList<MazeCount> way;
-	way.push(MazeCount(curLocation, 0));
-	bool checked[SIZE][SIZE];
-	memset(path, 0, sizeof(path[0][0]) * SIZE*SIZE);
-	memset(checked, 0, sizeof(checked[0][0]) * SIZE*SIZE);
-	
-	checked[curLocation.x][curLocation.y] = true;
-	
-	while (!way.isEmpty())
+	pastPath.push(curLocation);
+	Coordinate cur = NULL_COORD;
+	while (!pastPath.isEmpty())
 	{
-		MazeCount temp = way.peek();
-		way.pop();
-		int x = temp.current.x;
-		int y = temp.current.y;
-		int cost = temp.count;
-		path[x][y] = temp.count;
-
-		if (y < SIZE - 1 && y >= 0									//check North
-			&& maze[x][y].wallNorth == false
-			&& checked[x][y + 1] == false)
+		cur = pastPath.pop();
+		if (cur == Coordinate(8, 8)) continue;
+		int min_distance = 255;
+		for (int i = 0; i < 4; i++)
 		{
-			way.push(MazeCount(Coordinate(x, y + 1), cost + 1));
-			checked[x][y + 1] = true;
-		}
-
-		if (x < SIZE - 1 && x >= 0					//check East
-			&& maze[x][y].wallEast == false
-			&& checked[x + 1][y] == false)
-		{
-			way.push(MazeCount(Coordinate(x + 1, y), cost + 1));
-			checked[x + 1][y] = true;
-		}
-
-		if (y > 0 && y < SIZE											//check South
-			&& maze[x][y].wallSouth == false
-			&& checked[x][y - 1] == false)
-		{
-			way.push(MazeCount(Coordinate(x, y - 1), cost + 1));
-			checked[x][y - 1] = true;
-		}
-
-		if (x > 0 && x < SIZE		//check West
-			&& maze[x][y].wallWest == false
-			&& checked[x - 1][y] == false)
-		{
-			way.push(MazeCount(Coordinate(x - 1, y), cost + 1));
-			checked[x - 1][y] = true;
-		}
-	}
-	
-	if (curLocation.x >= SIZE || curLocation.x < 0 || curLocation.y < 0 || curLocation.y >= SIZE)
-	{
-		analogWrite(13, 1023);
-		move->stop();
-		return;
-	}
-
-	memset(checked, 0, sizeof(checked[0][0]) * SIZE*SIZE);
-	while (!realPath.isEmpty())
-	{
-		realPath.pop();
-	}
-	Coordinate find = curLocation;
-	Dir psuDir = curDirection;
-	int step = 0;
-	while (find != end)
-	{
-		StackList<Coordinate> shortest;
-		++step;
-		for (int i = 0; i < 3; i++)
-		{
-			Coordinate next = getCellDir(find, (Dir)i);
-			if (next == NULL_COORD) continue;
-			else if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
+			if (getWall((Dir)i) == false)
 			{
-				shortest.push(next);
-				checked[next.x][next.y] = true;
+				Coordinate temp = getCellDir(cur, (Dir)i);
+				if (path[temp.x][temp.y] < min_distance)
+				{
+					min_distance = path[temp.x][temp.y];
+				}
+				if (min_distance == 255) continue;
+				if (path[cur.x][cur.y] <= min_distance)
+				{
+					path[cur.x][cur.y] = min_distance + 1;
+					pastPath.push(temp);
+				}
 			}
-		}
-
-		/*
-		if (find.x > 0 && find.x <SIZE)  // check WEST
-		{
-		Coordinate next = getCellDir(find, WEST);
-		if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
-		{
-		shortest.push(next);
-		checked[next.x][next.y] = true;
 		}
 		
-		if (find.y < SIZE - 1 && find.y >=0)  // check NORTH
-		{
-			Coordinate next = getCellDir(find, NORTH);
-			if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
-			{
-				shortest.push(next);
-				checked[next.x][next.y] = true;
-			}
-		}
-		if (find.x < SIZE - 1 && find.x >= 0)  // check EAST
-		{
-			Coordinate next = getCellDir(find, EAST);
-			if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
-			{
-				shortest.push(next);
-				checked[next.x][next.y] = true;
-			}
-		}
-		if (find.y > 0 && find.y < SIZE)  // check SOUTH
-		{
-			Coordinate next = getCellDir(find, SOUTH);
-			if (path[next.x][next.y] == step && checked[next.x][next.y] == false)
-			{
-				shortest.push(next);
-				checked[next.x][next.y] = true;
-			}
-		}
-		*/
-		if (shortest.isEmpty())
-		{
-			digitalWrite(13, HIGH);
-			break;
-		}
-
-		Coordinate final = shortest.peek();
-		do
-		{
-			Coordinate compare = shortest.peek();
-			shortest.pop();
-			int dis1 = shortestDistance(compare, end);
-			int dis2 = shortestDistance(final, end);
-			if (final == end) break;
-			else if (dis1 < dis2 || (dis1 == dis2 && getDirToGo(find, compare) == psuDir) || compare == end) // if less or equal but straight
-			{
-				final = compare;
-			}
-		}
-		while (!shortest.isEmpty());
-		
-		realPath.push(final);
-		psuDir = getDirToGo(find, final);
-		find = final;
-		
-	}
-	
+	}	
 }
 
 Turn MazeClass::getTurnDir(const Dir &next)
@@ -477,35 +394,52 @@ Turn MazeClass::getTurnDir(const Dir &next)
 	}
 }
 
-void MazeClass::command()
+int MazeClass::command()
 {
-	if (move->getDistanceTravel() < 18.0*counter - 1.1) 
-	return;
-	//move->stopForward();
-	//move->resetEncoder();
+	if (move->getDistanceTravel() < 18.0*counter - 1.1)
+		return 0;
+	move->stopForward();
 	mapFlag = false;
-	++counter;
+	//++counter;
 
-	if (realPath.isEmpty())
-	{
-		move->stopForward();
-		return;
-	}
+	
+	
+	int x = curLocation.x;
+	int y = curLocation.y;
+	
 
-	Coordinate next = realPath.pop();
-	Dir temp = getDirToGo(curLocation, next);
-	if (temp == curDirection) return;
-	else
+	if (!getWallDir(NO_TURN))
 	{
-		move->stopForward();
-		bt.print(next.x);
-		bt.print(" ");
-		bt.println(next.y);
-		delay(100);
-		move->turn_encoder(getTurnDir(temp));
-		curDirection = temp;
-		move->goForward();
+		Coordinate temp = getCellDir(curLocation,curDirection);
+		if (path[x][y] > path[temp.x][temp.y])
+		{
+			move->resetEncoder();
+			return 1;
+		}
 	}
+	else if (!getWallDir(LEFT))
+	{
+		Coordinate temp = getCellDir(curLocation, leftDir(curDirection));
+		if (path[x][y] > path[temp.x][temp.y])
+		{
+			move->resetEncoder();
+			move->turn_encoder(LEFT);
+			return 1;
+		}
+	}
+	else if (!getWallDir(RIGHT))
+	{
+		Coordinate temp = getCellDir(curLocation, rightDir(curDirection));
+		if (path[x][y] > path[temp.x][temp.y])
+		{
+			move->resetEncoder();
+			move->turn_encoder(RIGHT);
+			return 1;
+		}
+	}
+	
+	floodFill(Coordinate(0, 0));
+	return -1;
 }
 
 

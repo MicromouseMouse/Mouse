@@ -27,12 +27,13 @@ class MazeClass
 	 Cell maze[SIZE][SIZE];
 	 int path[SIZE][SIZE];
 	 Coordinate curLocation;
+	 Coordinate nextLocation;
 	 Dir curDirection;
 	 Dir nextDirection;
 	 double curDistance;
 	 bool mapFlag;
 	 int counter;
-	 QueueList<Coordinate> realPath;
+	 StackList<Coordinate> pastPath;
 
 	 LedClass* led;
 	 MovementClass* move;
@@ -40,12 +41,13 @@ class MazeClass
 	 MazeClass(LedClass* a, MovementClass* b);
 
 	 void updateMap();
-	 
+	 bool getWall(const Dir &a);
+	 bool getWallDir(const Turn &a);
 	 void mapping();
 
 	 void floodFill(const Coordinate &end);
 
-	 void command();
+	 int command();
 
 	 Turn getTurnDir(const Dir &next);
 

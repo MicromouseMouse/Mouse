@@ -22,7 +22,7 @@ enum Dir {
 	INVALID
 };
 
-inline Dir opposite(Dir d) {
+inline Dir opposite(const Dir &d) {
 	switch (d) {
 	case NORTH:
 		return SOUTH;
@@ -38,7 +38,7 @@ inline Dir opposite(Dir d) {
 	}
 }
 
-inline Dir rightDir(Dir d) {
+inline Dir rightDir(const Dir &d) {
 	switch (d) {
 	case NORTH:
 		return EAST;
@@ -54,7 +54,7 @@ inline Dir rightDir(Dir d) {
 	}
 }
 
-inline Dir leftDir(Dir d) {
+inline Dir leftDir(const Dir &d) {
 	switch (d) {
 	case NORTH:
 		return WEST;

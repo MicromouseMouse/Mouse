@@ -45,6 +45,7 @@ int shortestDistance(const Coordinate &a, const Coordinate &b)
 
 Coordinate getCellDir(const Coordinate &cur, const Dir &dir)
 {
+	if (cur.x<0 || cur.y <0 || cur.x>SIZE - 1 || cur.y>SIZE - 1) return NULL_COORD;
 	switch (dir)
 	{
 	case NORTH:
