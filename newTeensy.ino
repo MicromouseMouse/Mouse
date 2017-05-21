@@ -57,6 +57,7 @@ void setup()
 
 void loop()
 {
+	//testMove();
 	//testLed();
 	//testEncoder();
 	//testMotor();
@@ -66,7 +67,17 @@ void loop()
 	//testRealMaze(LED_MODE);
 }
 
-
+void testMove()
+{
+	move.resetEncoder();
+	move.goForward();
+	while (true)
+	{
+		led.measure(10);
+		pid.PID(LED_MODE);
+		delayMicroseconds(1000);
+	}
+}
 
 void testSolving()
 {
@@ -137,7 +148,7 @@ void testOneWay(const PID_MODE &A)
 		//extraSpace = 2*speed;
 		//if (speed > 4000) speed = 4000;
 		led.measure(ledTime);
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.5 - extraSpace)
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.55 - extraSpace)
 		{
 			move.stopForward();
 			led.measure(ledTime);

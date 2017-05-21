@@ -18,8 +18,8 @@ PIDClass::PIDClass(MovementClass * a, LedClass* b, elapsedMicros & t)
 	Kd_led = 240;
 
 	Ki_encoder = 0;
-	Kp_encoder = 1;
-	Kd_encoder = 0;
+	Kp_encoder = 0.2;
+	Kd_encoder = 3;
 
 	encoderFlag = false;
 	encoderOffset = 0;
@@ -48,13 +48,13 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 		{
 		error = leftD - rightD - led->offsetLed;
 		}
-		else if (leftF > led->leftMiddleThreshold*0.75 && leftD > led->leftThreshold*0.8) //wall left
+		else if (leftF > led->leftMiddleThreshold*0.72 && leftD > led->leftThreshold*0.6) //wall left
 		{
-			error = leftD - led->leftThreshold -1000;//-200;
+			error = leftD - led->leftThreshold -2000;//-200;
 		}
-		else if (rightF > led->rightMiddleThreshold*0.75 && rightD > led->rightThreshold*0.8)  //wall right
+		else if (rightF > led->rightMiddleThreshold*0.72 && rightD > led->rightThreshold*0.6)  //wall right
 		{
-			error = led->rightThreshold - rightD +1000;
+			error = led->rightThreshold - rightD +2000;
 		}
 		else
 		{
@@ -88,11 +88,11 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 	time = 0;
 	lastError = error;
 	//integrator += error * (time *0.001);
-
+	
 	double fix = pError + dError +iError;
 	move->currentSpeedLeft = move->baseSpeed + fix;
 	move->currentSpeedRight = move->baseSpeed - fix;
-
+	
 	
 
 	if (move->currentSpeedLeft < (move->baseSpeed *(10-range)*0.1 )) move->currentSpeedLeft = move->baseSpeed * (10-range) *0.1;
@@ -102,6 +102,15 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 	else if (move->currentSpeedRight  > (move->baseSpeed * (10 + range) *0.1)) move->currentSpeedRight = move->baseSpeed * (10 + range) *0.1;
 	
 	move->goForward(move->currentSpeedLeft, move->currentSpeedRight);
-
+	Serial.println(error);
+	Serial.print(pError);
+	Serial.print(" ");
+	Serial.print(dError);
+	Serial.print(" ");
+	Serial.println(fix);
+	Serial.print(" ");
+	Serial.print(move->currentSpeedLeft);
+	Serial.print(" ");
+	Serial.println(move->currentSpeedRight);
 }
 
