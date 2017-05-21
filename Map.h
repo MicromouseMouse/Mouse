@@ -104,7 +104,10 @@ inline bool operator!=(const Coordinate & a, const Coordinate &b)
 {
 	return (a.x != b.x) || (a.y != b.y);
 }
-
+inline bool checkStraight(const Coordinate & a, const Coordinate &b)
+{
+	return (a.x == b.x) || (a.y == b.y);
+}
 Coordinate getCoord(const Coordinate &a, const Dir &dir);
 	
 

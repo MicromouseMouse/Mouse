@@ -45,8 +45,9 @@ void setup()
 	led.init();
 	move.turn_encoder(BACK);
 	move.resetEncoder();
-	led.leftMiddleThreshold = 4000;
-	led.rightMiddleThreshold = 4000;
+	led.leftMiddleThreshold = 5200;
+	led.rightMiddleThreshold = 5900;
+	maze.floodFill(Coordinate(0,0));
 	led.measure(ledTime);
 	control = 0;
 	time = 0;
@@ -119,27 +120,39 @@ void testOneWay(const PID_MODE &A)
 	{ 
 		//maze.randomMapping();
 		maze.mapping();
-		int check = maze.command();
-		if(check == -1) maze.command();
-		else if (check == 1)
+		int check = maze.command(0);
+		if(check == -1) check=maze.command(true);
+		if (check == 2)
 		{
-			delay(1000);
+			delay(300);
+			bluetooth.print(maze.curLocation.x);
+			bluetooth.print(" ");
+			bluetooth.println(maze.curLocation.y);
+			
 			bluetooth.println(maze.printFloodFill());
-			delay(1000);
+			bluetooth.println(maze.printMap());
+			delay(300);
 		}
-		
-		
+	
 		//extraSpace = 2*speed;
 		//if (speed > 4000) speed = 4000;
 		led.measure(ledTime);
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.65 - extraSpace)
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.5 - extraSpace)
 		{
 			move.stopForward();
 			led.measure(ledTime);
-			move.turn_encoder(RIGHT);
+			/*
+			bluetooth.println("in this loop\n");
+			bluetooth.print(maze.curLocation.x);
+			bluetooth.print(" ");
+			bluetooth.println(maze.curLocation.y);
+			bluetooth.println(maze.printFloodFill());
+			bluetooth.println(maze.printMap());
+			*/
+			if (check == 0) check = maze.command(true);
 			move.resetEncoder();
 			led.measure(ledTime);
-			delay(1000);
+			//delay(1000);
 			//move.goForward();
 			//bluetooth.println(move.getDistanceTravel(), 3);
 			//bluetooth.println(maze.printMap());
@@ -221,7 +234,7 @@ void testLed()
 
 	{
 		led.measure(ledTime);
-		
+		/*
 		Serial.print("");
 		Serial.print(led.getLed(LEFT_REAR), DEC);
 		Serial.print("  ");
@@ -235,8 +248,8 @@ void testLed()
 		Serial.print("  ");
 		Serial.print(led.getLed(RIGHT_REAR), DEC);
 		Serial.println("\n");
+		*/
 		
-		/*
 		bluetooth.println("test");
 		bluetooth.print("");
 		bluetooth.print(led.getLed(LEFT_REAR));//, DEC);
@@ -254,7 +267,7 @@ void testLed()
 		delay(100);
 		
 		//bluetooth.println("test");;
-		*/
+		
 	}
 }
 

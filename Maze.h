@@ -33,6 +33,7 @@ class MazeClass
 	 double curDistance;
 	 bool mapFlag;
 	 int counter;
+	 int loopCounter;
 	 StackList<Coordinate> pastPath;
 
 	 LedClass* led;
@@ -46,8 +47,8 @@ class MazeClass
 	 void mapping();
 
 	 void floodFill(const Coordinate &end);
-
-	 int command();
+	 
+	 int command(bool force);
 
 	 Turn getTurnDir(const Dir &next);
 
