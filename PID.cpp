@@ -42,19 +42,19 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 	{
 	case LED_MODE:
 		
-		if ((leftF > led->leftMiddleThreshold*0.65 && leftD > led->leftThreshold*0.75)
-			&& (rightF > led->rightMiddleThreshold*0.65 && rightD > led->rightThreshold*0.75)
+		if ((leftF > led->leftMiddleThreshold*0.85 && leftD > led->leftThreshold*0.85)
+			&& (rightF > led->rightMiddleThreshold*0.85 && rightD > led->rightThreshold*0.85)
 			&& turnFlag == false) // wall both side
 		{
 		error = leftD - rightD - led->offsetLed;
 		}
-		else if (leftF > led->leftMiddleThreshold*0.72 && leftD > led->leftThreshold*0.6) //wall left
+		else if (leftF > led->leftMiddleThreshold*0.9 && leftD > led->leftThreshold*0.9) //wall left
 		{
-			error = leftD - led->leftThreshold -2000;//-200;
+			error = leftD - led->leftThreshold -1000;//-200;
 		}
-		else if (rightF > led->rightMiddleThreshold*0.72 && rightD > led->rightThreshold*0.6)  //wall right
+		else if (rightF > led->rightMiddleThreshold*0.9 && rightD > led->rightThreshold*0.9)  //wall right
 		{
-			error = led->rightThreshold - rightD +2000;
+			error = led->rightThreshold - rightD +1000;
 		}
 		else
 		{
@@ -70,7 +70,7 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 		
 		//error = led->rightThreshold- rightD + 1000;
 		//error =  leftD - led->leftThreshold  - 1000;
-		encoderFlag = false;
+		encoderFlag = true;//false;
 		encoderOffset = 0;
 		pError = Kp_led* error;
 		dError = Kd_led* (error - lastError) / (time*0.001);
@@ -78,7 +78,7 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 		break;
 
 	case ENCODER_MODE:
-		error = move->right_encoder.read() - move->left_encoder.read() - encoderOffset;  // positive steer to the left
+		error = 1.007779*move->right_encoder.read() - move->left_encoder.read() - encoderOffset;  // positive steer to the left
 		pError = Kp_encoder* error;
 		dError = Kd_encoder* (error - lastError) / (time *0.001);
 		//iError = Ki_encoder* integrator * time *0.001;
@@ -102,15 +102,5 @@ void PIDClass::PID(const PID_MODE &mode)   // stay in middle by led
 	else if (move->currentSpeedRight  > (move->baseSpeed * (10 + range) *0.1)) move->currentSpeedRight = move->baseSpeed * (10 + range) *0.1;
 	
 	move->goForward(move->currentSpeedLeft, move->currentSpeedRight);
-	Serial.println(error);
-	Serial.print(pError);
-	Serial.print(" ");
-	Serial.print(dError);
-	Serial.print(" ");
-	Serial.println(fix);
-	Serial.print(" ");
-	Serial.print(move->currentSpeedLeft);
-	Serial.print(" ");
-	Serial.println(move->currentSpeedRight);
 }
 

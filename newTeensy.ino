@@ -39,16 +39,15 @@ void testMotor();
 
 void setup()
 {
-	delay(12000);
+	delay(6000);
 	bluetooth.begin(9600);
 	Serial.begin(9600);
 	led.init();
-	move.turn_encoder(BACK);
+	//move.turn_encoder(BACK);
 	move.resetEncoder();
-	led.leftMiddleThreshold = 5200;
-	led.rightMiddleThreshold = 5900;
 	maze.floodFill(Coordinate(0,0));
 	led.measure(ledTime);
+	led.frontThreshold = 50000;
 	control = 0;
 	time = 0;
 	
@@ -73,6 +72,11 @@ void testMove()
 	move.goForward();
 	while (true)
 	{
+		if (move.getDistanceTravel() > 18 * 5 + 1.1)
+		{
+			move.stopForward();
+			delay(10000);
+		}
 		led.measure(10);
 		pid.PID(LED_MODE);
 		delayMicroseconds(1000);
@@ -161,7 +165,7 @@ void testOneWay(const PID_MODE &A)
 			bluetooth.println(maze.printMap());
 			*/
 			if (check == 0) check = maze.command(true);
-			move.resetEncoder();
+			//move.resetEncoder();
 			led.measure(ledTime);
 			//delay(1000);
 			//move.goForward();
@@ -223,7 +227,6 @@ void testOneWay(const PID_MODE &A)
 			//pid.PID(A);
 		}
 		
-		
 		if (control > 1000)
 		{
 			PIDFlag = true;
@@ -245,7 +248,7 @@ void testLed()
 
 	{
 		led.measure(ledTime);
-		/*
+		
 		Serial.print("");
 		Serial.print(led.getLed(LEFT_REAR), DEC);
 		Serial.print("  ");
@@ -259,8 +262,8 @@ void testLed()
 		Serial.print("  ");
 		Serial.print(led.getLed(RIGHT_REAR), DEC);
 		Serial.println("\n");
-		*/
 		
+		/*
 		bluetooth.println("test");
 		bluetooth.print("");
 		bluetooth.print(led.getLed(LEFT_REAR));//, DEC);
@@ -276,7 +279,8 @@ void testLed()
 		bluetooth.print(led.getLed(RIGHT_REAR));//, DEC);
 		bluetooth.println("\n");
 		delay(100);
-		
+		*/
+
 		//bluetooth.println("test");;
 		
 	}

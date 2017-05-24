@@ -77,7 +77,7 @@ void MazeClass::simpleFill()
 
 void MazeClass::simpleTravel()
 {
-	if (move->getDistanceTravel() < 18.0*counter - 1.15)
+	if (move->getDistanceTravel() < 18.0*counter - 2.1)
 		return;
 	mapFlag = false;
 	int x = curLocation.x;
@@ -195,9 +195,9 @@ bool MazeClass::getWallDir(const Turn &a)
 void MazeClass::updateMap()
 {
 	
-	bool front = (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > 8100);
-	bool left =  led->left_diagonal > led->leftThreshold*0.48;
-	bool right = led->right_diagonal > led->rightThreshold*0.48;
+	bool front = (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > 9500);
+	bool left =  led->left_diagonal > led->leftThreshold*0.58;
+	bool right = led->right_diagonal > led->rightThreshold*0.58;
 
 	switch (curDirection)
 	{
@@ -281,11 +281,10 @@ void MazeClass::updateMap()
 
 void MazeClass::mapping()
 {
-	if (move->getDistanceTravel() > 18.0*counter - 4.4 && mapFlag == false)
+	if (move->getDistanceTravel() > 18.0*counter - 6 && mapFlag == false)
 	{
 		mapFlag = true;
 		updateMap();
-		//command();
 	}
 }
 
@@ -352,19 +351,22 @@ String MazeClass::printFloodFill()
 void MazeClass::floodFill(const Coordinate &end)
 {
 	QueueList<MazeCount> way;
-	way.push(MazeCount(Coordinate(7,7), 0));
-	way.push(MazeCount(Coordinate(7,8), 0));
-	way.push(MazeCount(Coordinate(8,7), 0));
-	way.push(MazeCount(Coordinate(8,8), 0));
+	//way.push(MazeCount(Coordinate(7,7), 0));
+	//way.push(MazeCount(Coordinate(7,8), 0));
+	//way.push(MazeCount(Coordinate(8,7), 0));
+	//way.push(MazeCount(Coordinate(8,8), 0));
+	way.push(MazeCount(Coordinate(2, 3), 0));
 	
 	bool checked[SIZE][SIZE];
 	memset(path, 0, sizeof(path[0][0]) * SIZE*SIZE);
 	memset(checked, 0, sizeof(checked[0][0]) * SIZE*SIZE);
 
-	checked[7][7] = true;
-	checked[7][8] = true;
-	checked[8][7] = true;
-	checked[8][8] = true;
+	//checked[7][7] = true;
+	//checked[7][8] = true;
+	//checked[8][7] = true;
+	//checked[8][8] = true;
+
+	checked[2][3] = true;
 
 	while (!way.isEmpty())
 	{
@@ -435,7 +437,7 @@ Turn MazeClass::getTurnDir(const Dir &next)
 
 int MazeClass::command(bool force)
 {
-	if (move->getDistanceTravel() < 18.0*counter - 1.1 && force == false)
+	if (move->getDistanceTravel() < 18.0*counter + 1 && force == false)
 		return 0;
 	//++counter;
 	int x = curLocation.x;
@@ -458,12 +460,14 @@ int MazeClass::command(bool force)
 			led->measure(10);
 		}
 	}
-	else if(force == false) move->stopForward();
+
 	
 	if ((getWallDir(NO_TURN) && getWallDir(LEFT) && getWallDir(RIGHT)) 
 		|| (loopCounter > 4 ))
 	{
+		move->stopForward();
 		move->turn_encoder(BACK);
+		counter = 1;
 		move->resetEncoder();
 		curDirection = opposite(curDirection);
 		floodFill(Coordinate(0, 0));
@@ -471,12 +475,14 @@ int MazeClass::command(bool force)
 		loopCounter = 0;
 		return 1;
 	}
+	
 	if (!getWallDir(NO_TURN))
 	{
 		//Coordinate temp = getCellDir(curLocation,curDirection);
 		if (path[x][y] > path[tempFront.x][tempFront.y])
 		{
-			move->resetEncoder();
+			++counter;
+			//move->resetEncoder();
 			mapFlag = false;
 			return 1;
 		}
@@ -486,8 +492,10 @@ int MazeClass::command(bool force)
 		//Coordinate temp = getCellDir(curLocation, leftDir(curDirection));
 		if (path[x][y] > path[tempLeft.x][tempLeft.y])
 		{
-			move->resetEncoder();
+			move->stopForward();
+			counter = 1;
 			move->turn_encoder(LEFT);
+			move->resetEncoder();
 			curDirection = leftDir(curDirection);
 			mapFlag = false;
 			return 1;
@@ -498,8 +506,10 @@ int MazeClass::command(bool force)
 		//Coordinate temp = getCellDir(curLocation, rightDir(curDirection));
 		if (path[x][y] > path[tempRight.x][tempRight.y])
 		{
-			move->resetEncoder();
+			move->stopForward();
+			counter = 1;
 			move->turn_encoder(RIGHT);
+			move->resetEncoder();
 			curDirection = rightDir(curDirection);
 			mapFlag = false;
 			return 1;
