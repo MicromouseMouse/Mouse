@@ -36,6 +36,57 @@ SoftwareSerial bluetooth(7, 8);
 void testLed();
 void testEncoder();
 void testMotor();
+void testAdjust()
+{
+	int tolerance = 500;
+	//analogReadResolution(11);
+	while (1)
+	{
+		led.measure(10);
+		int leftError = led.left_rear - led.forwardThresholdL; // placeholder value for left rear led threshold
+		int rightError = led.right_rear - led.forwardThresholdR; // placeholder for right rear led threshold
+
+		if (leftError > tolerance) // too close from the wall
+		{
+			analogWrite(LEFT_BACKWARD, 150);
+			analogWrite(LEFT_FORWARD, 0);
+		}
+
+		else if (leftError < -tolerance) // too far
+		{
+			analogWrite(LEFT_FORWARD, 120);
+			analogWrite(LEFT_BACKWARD, 0);
+		}
+
+		else
+		{
+			analogWrite(LEFT_FORWARD, 0);
+			analogWrite(LEFT_BACKWARD, 0);
+		}
+
+		if (rightError > tolerance) // too close from the wall
+		{
+			analogWrite(RIGHT_BACKWARD, 150);
+			analogWrite(RIGHT_FORWARD, 0);
+		}
+
+		else if (rightError < -tolerance) // too far
+		{
+			analogWrite(RIGHT_FORWARD, 120);
+			analogWrite(RIGHT_BACKWARD, 0);
+		}
+
+		else
+		{
+			analogWrite(RIGHT_FORWARD, 0);
+			analogWrite(RIGHT_BACKWARD, 0);
+		}
+
+
+
+		delay(3);
+	}
+}
 
 void setup()
 {
@@ -45,7 +96,7 @@ void setup()
 	led.init();
 	//move.turn_encoder(BACK);
 	move.resetEncoder();
-	maze.floodFill(Coordinate(0,0));
+	//maze.floodFill(Coordinate(0,0));
 	led.measure(ledTime);
 	led.frontThreshold = 50000;
 	control = 0;
@@ -62,8 +113,9 @@ void loop()
 	//testMotor();
 	//testStraight(ENCODER_MODE,'a');
 	//testSolving();
-	testOneWay(LED_MODE);
+	//testOneWay(LED_MODE);
 	//testRealMaze(LED_MODE);
+	testAdjust();
 }
 
 void testMove()
