@@ -58,12 +58,7 @@ class MazeClass
 
 	 String printFloodFill();
 
-	
-	 Turn determineRandomMotion();
-	 void randomMapping();
-
-	 void simpleFill();
-	 void simpleTravel();
+	 void stopAlign();
 };
 
 

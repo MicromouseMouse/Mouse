@@ -25,14 +25,22 @@ LedClass::LedClass()
 
 }
 
-void LedClass::init()
+void LedClass::init1()
 {
 	delay(1000);
 	measure(10);
 	leftThreshold = left_diagonal ;
 	rightThreshold = right_diagonal ;
+	frontThresholdL = left_rear;
+	frontThresholdR = right_rear;
 	frontThreshold = left_rear + right_rear;
 	offsetLed = left_diagonal - right_diagonal;
+}
+
+void LedClass::init2()
+{
+	delay(1000);
+	measure(10);
 	leftMiddleThreshold = left_middle;
 	rightMiddleThreshold = right_middle;
 }

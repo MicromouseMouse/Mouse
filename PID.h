@@ -25,21 +25,21 @@ const float Kd_encoder = 5;
 
 
 
-enum PID_MODE{LED_MODE,GYRO_MODE,ENCODER_MODE};
+enum PID_MODE{LED_MODE,GYRO_MODE,ENCODER_MODE,HYBRID_MODE};
 
 class PIDClass
 {
 public:
 	MovementClass* move;
 	LedClass* led;
-	double lastError;
+	double lastErrorLED;
+	double lastErrorMotor;
 	double integrator;
 	elapsedMicros time;
 
 	int encoderOffset;
 
 	bool encoderFlag;
-	bool turnFlag;
 
 	double Ki_led ;
 	double Kp_led ;

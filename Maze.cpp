@@ -33,90 +33,6 @@ const int centery3 = 7;
 const int centerx4 = 8;
 const int centery4 = 8;
 
-void MazeClass::simpleFill()
-{
-	mazeCoordinate center1(centerx, centery);
-	mazeCoordinate center2(centerx2, centery2);
-	mazeCoordinate center3(centerx3, centery2);
-	mazeCoordinate center4(centerx4, centery4);
-
-	int temp1[SIZE][SIZE];
-	int temp2[SIZE][SIZE];
-
-	for (int i = 0; i < SIZE; i++)
-	{
-		for (int j = 0; j < SIZE; j++)
-		{
-			temp1[j][i] = 0;
-			temp2[j][i] = 0;
-		}
-	}
-
-
-	for (int i = 0; i < SIZE; i++)
-		for (int j = 0; j < center1.x; j++)
-			temp1[j][i] = absolute(center1.x - j);
-	for (int i = 0; i < SIZE; i++)
-		for (int j = center2.x; j < SIZE; j++)
-			temp1[j][i] = absolute(center2.x - j);
-
-
-	for (int i = 0; i < SIZE; i++)
-		for (int j = 0; j < center1.y; j++)
-			temp2[i][j] = absolute(center1.y - j);
-	for (int i = 0; i < SIZE; i++)
-		for (int j = center4.y; j < SIZE; j++)
-			temp2[i][j] = absolute(center4.y - j);
-
-	
-	for (int i = 0; i < SIZE; i++)
-		for (int j = 0; j < SIZE; j++)
-			path[j][i] = temp1[j][i] + temp2[j][i];
-
-}
-
-void MazeClass::simpleTravel()
-{
-	if (move->getDistanceTravel() < 18.0*counter - 2.1)
-		return;
-	mapFlag = false;
-	int x = curLocation.x;
-	int y = curLocation.y;
-	int value = path[x][y];
-	QueueList<Coordinate> holder;
-	for (int i = 0; i < 3; i++)
-	{
-		Coordinate next = getCellDir(curLocation, (Dir)i);
-		if (next == NULL_COORD) continue;
-		else holder.push(next);
-	}
-	Coordinate final = holder.pop();
-	while (!holder.isEmpty())
-	{
-		Coordinate temp = holder.pop();
-		if ((path[temp.x][temp.y] < path[final.x][final.y]) 
-			|| (( path[temp.x][temp.y] == path[final.x][final.y]) && getDir(curLocation,temp) == curDirection))
-		{
-			final = temp;
-		}
-	}
-
-	Dir tempDir = getDirToGo(curLocation, final);
-	if (tempDir == curDirection) {
-		counter++;
-		return;
-	}
-	else
-	{
-		move->stopForward();
-		delay(100);
-		move->turn_encoder(getTurnDir(tempDir));
-		curDirection = tempDir;
-		move->goForward();
-	}
-	counter = 1;
-	move->resetEncoder();
-}
 
 MazeClass::MazeClass(LedClass* a, MovementClass* b)
 {
@@ -194,10 +110,11 @@ bool MazeClass::getWallDir(const Turn &a)
 
 void MazeClass::updateMap()
 {
-	
-	bool front = (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > 9500);
-	bool left =  led->left_diagonal > led->leftThreshold*0.58;
-	bool right = led->right_diagonal > led->rightThreshold*0.58;
+	analogWrite(13, 1023);
+	led->measure(10);
+	bool front = (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > 7700);
+	bool left = led->left_diagonal > 19500;// led->leftThreshold*0.9;
+	bool right = led->right_diagonal > 16200;// led->rightThreshold*0.8;
 
 	switch (curDirection)
 	{
@@ -275,13 +192,13 @@ void MazeClass::updateMap()
 		exit(1);
 	}
 	
-
+	floodFill(Coordinate(0, 0));
 
 }
 
 void MazeClass::mapping()
 {
-	if (move->getDistanceTravel() > 18.0*counter - 6 && mapFlag == false)
+	if (move->getDistanceTravel() > 18.0*counter - 6 - 035*counter && mapFlag == false)
 	{
 		mapFlag = true;
 		updateMap();
@@ -351,22 +268,22 @@ String MazeClass::printFloodFill()
 void MazeClass::floodFill(const Coordinate &end)
 {
 	QueueList<MazeCount> way;
-	//way.push(MazeCount(Coordinate(7,7), 0));
-	//way.push(MazeCount(Coordinate(7,8), 0));
-	//way.push(MazeCount(Coordinate(8,7), 0));
-	//way.push(MazeCount(Coordinate(8,8), 0));
-	way.push(MazeCount(Coordinate(2, 3), 0));
+	way.push(MazeCount(Coordinate(7,7), 0));
+	way.push(MazeCount(Coordinate(7,8), 0));
+	way.push(MazeCount(Coordinate(8,7), 0));
+	way.push(MazeCount(Coordinate(8,8), 0));
+	//way.push(MazeCount(Coordinate(4, 4), 0));
 	
 	bool checked[SIZE][SIZE];
 	memset(path, 0, sizeof(path[0][0]) * SIZE*SIZE);
 	memset(checked, 0, sizeof(checked[0][0]) * SIZE*SIZE);
 
-	//checked[7][7] = true;
-	//checked[7][8] = true;
-	//checked[8][7] = true;
-	//checked[8][8] = true;
+	checked[7][7] = true;
+	checked[7][8] = true;
+	checked[8][7] = true;
+	checked[8][8] = true;
 
-	checked[2][3] = true;
+	//checked[4][4] = true;
 
 	while (!way.isEmpty())
 	{
@@ -437,7 +354,7 @@ Turn MazeClass::getTurnDir(const Dir &next)
 
 int MazeClass::command(bool force)
 {
-	if (move->getDistanceTravel() < 18.0*counter + 1 && force == false)
+	if (move->getDistanceTravel() < 18.0*counter - -0.5 - 0.15*counter && force == false)
 		return 0;
 	//++counter;
 	int x = curLocation.x;
@@ -446,56 +363,48 @@ int MazeClass::command(bool force)
 	Coordinate tempLeft = getCellDir(curLocation, leftDir(curDirection));
 	Coordinate tempRight = getCellDir(curLocation, rightDir(curDirection));
 
-	
+
 	if (getWallDir(NO_TURN))
 	{
-		while (true)
-		{
-			if (led->getLed(LEFT_REAR) + led->getLed(RIGHT_REAR) > led->frontThreshold*0.55)
-			{
-				move->stopForward();
-				break;
-			}
-			move->goForward();
-			led->measure(10);
-		}
+		stopAlign();
 	}
 
 	
-	if ((getWallDir(NO_TURN) && getWallDir(LEFT) && getWallDir(RIGHT)) 
-		|| (loopCounter > 4 ))
-	{
-		move->stopForward();
-		move->turn_encoder(BACK);
-		counter = 1;
-		move->resetEncoder();
-		curDirection = opposite(curDirection);
-		floodFill(Coordinate(0, 0));
-		mapFlag = false;
-		loopCounter = 0;
-		return 1;
-	}
-	
+	//move->stopForward();
 	if (!getWallDir(NO_TURN))
 	{
 		//Coordinate temp = getCellDir(curLocation,curDirection);
 		if (path[x][y] > path[tempFront.x][tempFront.y])
 		{
-			++counter;
-			//move->resetEncoder();
+			//counter++;
+			move->resetEncoder();
 			mapFlag = false;
-			return 1;
+			return 5;
 		}
 	}
+	
 	if (!getWallDir(LEFT))
 	{
 		//Coordinate temp = getCellDir(curLocation, leftDir(curDirection));
 		if (path[x][y] > path[tempLeft.x][tempLeft.y])
 		{
 			move->stopForward();
-			counter = 1;
-			move->turn_encoder(LEFT);
 			move->resetEncoder();
+			
+			
+			/*
+			delay(300);
+			bt.print(curLocation.x);
+			bt.print(" ");
+			bt.println(curLocation.y);
+
+			bt.println(printFloodFill());
+			bt.println(printMap());
+			delay(300);
+			*/
+			
+		
+			move->turn_encoder(LEFT);
 			curDirection = leftDir(curDirection);
 			mapFlag = false;
 			return 1;
@@ -507,16 +416,97 @@ int MazeClass::command(bool force)
 		if (path[x][y] > path[tempRight.x][tempRight.y])
 		{
 			move->stopForward();
-			counter = 1;
-			move->turn_encoder(RIGHT);
 			move->resetEncoder();
+
+			
+			/*
+			delay(300);
+			bt.print(curLocation.x);
+			bt.print(" ");
+			bt.println(curLocation.y);
+
+			bt.println(printFloodFill());
+			bt.println(printMap());
+			delay(300);
+			*/
+			
+
+			move->turn_encoder(RIGHT);
 			curDirection = rightDir(curDirection);
 			mapFlag = false;
 			return 1;
 		}
 	}
 	
-	floodFill(Coordinate(0, 0));
+
+	if ((getWallDir(NO_TURN) && getWallDir(LEFT) && getWallDir(RIGHT)))
+		//|| (loopCounter > 2))
+	{
+		move->stopForward();
+		move->turn_encoder(LEFT);
+		stopAlign();
+		move->turn_encoder(LEFT);
+		//move->turn_encoder(BACK);
+		move->resetEncoder();
+
+		/*
+		delay(300);
+		bt.print(curLocation.x);
+		bt.print(" ");
+		bt.println(curLocation.y);
+
+		bt.println(printFloodFill());
+		bt.println(printMap());
+		delay(300);
+		*/
+
+		curDirection = opposite(curDirection);
+		floodFill(Coordinate(0, 0));
+		mapFlag = false;
+		loopCounter = 0;
+		return 1;
+	}
+	else if (loopCounter > 2)
+	{
+		move->stopForward();
+		if (getWallDir(LEFT))
+		{
+			move->turn_encoder(LEFT);
+			stopAlign();
+			move->turn_encoder(LEFT);
+		}
+		else if (getWallDir(RIGHT))
+		{
+			move->turn_encoder(RIGHT);
+			stopAlign();
+			move->turn_encoder(RIGHT);
+		}
+		else
+		{
+			move->turn_encoder(BACK);
+		}
+		//move->turn_encoder(BACK);
+		move->resetEncoder();
+
+		/*
+		delay(300);
+		bt.print(curLocation.x);
+		bt.print(" ");
+		bt.println(curLocation.y);
+
+		bt.println(printFloodFill());
+		bt.println(printMap());
+		delay(300);
+		*/
+
+		curDirection = opposite(curDirection);
+		floodFill(Coordinate(0, 0));
+		mapFlag = false;
+		loopCounter = 0;
+		return 1;
+	}
+	
+	//floodFill(Coordinate(0, 0));
 	//bt.println(printFloodFill());
 	//bt.println(loopCounter);
 	++loopCounter;
@@ -524,100 +514,61 @@ int MazeClass::command(bool force)
 }
 
 
-void MazeClass::randomMapping()
+void MazeClass::stopAlign()
 {
-	if (move->getDistanceTravel() < 18.0*counter - 3)
-		return;
-	//move->stopForward();
-	Turn randomDirection = determineRandomMotion();
-	switch (randomDirection)
+	int tolerance = 700;
+	elapsedMillis time = 0;
+	while (time < 300)
 	{
-	case NO_TURN:
-		++counter;
-		return;
-	case LEFT:
-		move->stopForward();
-		move->turn_encoder(LEFT);
-		break;
-	case RIGHT:
-		move->stopForward();
-		move->turn_encoder(RIGHT);
-		break;
-	case BACK:
-		move->stopForward();
-		move->turn_encoder(BACK);
-		break;
-	}
-	counter = 1;
-	move->resetEncoder();
+		led->measure(10);
+		int leftError = led->left_rear - led->frontThresholdL; // placeholder value for left rear led threshold
+		int rightError = led->right_rear - led->frontThresholdR; // placeholder for right rear led threshold
 
-}
-
-Turn MazeClass::determineRandomMotion()
-{
-	led->measure(10);
-	bool leftOpening = led->getLed(LEFT_DIAGONAL) < led->leftThreshold*0.7;
-	bool rightOpening = led->getLed(RIGHT_DIAGONAL) < led->rightThreshold*0.7;
-	bool frontOpening = led->getLed(RIGHT_REAR) + led->getLed(LEFT_REAR) < led->frontThreshold*0.6;
-	if (leftOpening && rightOpening && frontOpening)
-	{
-		switch (led->right_rear % 3)
+		if (leftError > tolerance) // too close from the wall
 		{
-		case 0:
-			return NO_TURN;
-		case 1:
-			// turn left;
-			return LEFT;
-		case 2:
-			// turn left;
-			return RIGHT;
+			analogWrite(LEFT_BACKWARD, 150);
+			analogWrite(LEFT_FORWARD, 0);
 		}
-	}
 
-	else if (leftOpening && frontOpening)
-	{
-		switch (led->left_rear % 2)
+		else if (leftError < -tolerance) // too far
 		{
-		case 0:
-			return NO_TURN;
-		case 1:
-			// turn left;
-			return LEFT;
+			analogWrite(LEFT_FORWARD, 120);
+			analogWrite(LEFT_BACKWARD, 0);
 		}
-	}
 
-	else if (leftOpening && rightOpening)
-	{
-		switch (led->left_diagonal % 2)
+		else
 		{
-		case 0:
-			return LEFT;
-		case 1:
-			// turn left;
-			return RIGHT;
+			analogWrite(LEFT_FORWARD, 0);
+			analogWrite(LEFT_BACKWARD, 0);
 		}
-	}
 
-	else if (frontOpening && rightOpening)
-	{	
-		switch (led->right_diagonal % 2)
+		if (rightError > tolerance) // too close from the wall
 		{
-
-		case 0:
-			return NO_TURN;
-		case 1:
-			// turn right;
-			return RIGHT;
+			analogWrite(RIGHT_BACKWARD, 150);
+			analogWrite(RIGHT_FORWARD, 0);
 		}
+
+		else if (rightError < -tolerance) // too far
+		{
+			analogWrite(RIGHT_FORWARD, 120);
+			analogWrite(RIGHT_BACKWARD, 0);
+		}
+
+		else
+		{
+			analogWrite(RIGHT_FORWARD, 0);
+			analogWrite(RIGHT_BACKWARD, 0);
+		}
+		delay(1);
 	}
-	else if (!frontOpening && !leftOpening && !rightOpening)
-		return BACK;
-
-	else if (leftOpening)
-		return LEFT;
-	else if (rightOpening)
-		return RIGHT;
-	else 
-		return NO_TURN;
-
+	move->goForward(0, 0);
+	/*
+	bt.println(printMap());
+	bt.println(printFloodFill());
+	bt.print(curLocation.x);
+	bt.print(" ");
+	bt.println(curLocation.y);
+	*/
+	delay(100);
+	//move->resetEncoder();
 }

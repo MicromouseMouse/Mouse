@@ -43,12 +43,14 @@ public:
 	int frontThreshold;
 	int leftMiddleThreshold;
 	int rightMiddleThreshold;
+	int frontThresholdL;
+	int frontThresholdR;
 
 	LedClass();
 	// initialize pinMode, led reading and wall
 
-	void init();
-
+	void init1();
+	void init2();
 	int getLed(const LED &a);
 		// return LED reading from correspoding position
 

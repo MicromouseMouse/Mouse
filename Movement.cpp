@@ -37,7 +37,7 @@ long MovementClass::getEncoderReading(const Turn& side)
 
 float MovementClass::getDistanceTravel()   // get total distance travel
 {
-	distance = ((left_encoder.read() + right_encoder.read())/2.0) * WHEEL_CIRCUMFERENCE / 5760.0 *31/29.0;
+	distance = ((left_encoder.read() + right_encoder.read())/2.0) *1.005027318* WHEEL_CIRCUMFERENCE / 5760.0;
 	return distance;
 }
 
@@ -90,28 +90,61 @@ void MovementClass::goForwardCell(const int &a) //go foward num cell
 
 void MovementClass::stopForward()
 {
-	int initial = left_encoder.read() + right_encoder.read();
-	int current = initial;
-	int dt = 1000;
-	int lastErr= 0;
-	int kp = 1;
-	int kd = 1;
-	int minSpeed = 60;
-	int err = 0;
-	elapsedMillis lim = 0;
-	elapsedMicros interval = 0;
-	while (lim < 200 && (current -50 < initial || current + 50 > initial) )
+	int initialLeft = left_encoder.read(); 
+	int initialRight = right_encoder.read();
+	int tolerance = 30;
+	elapsedMillis time = 0;
+	while (time < 300)
 	{
-		err = kp*(current - initial) + kd* (err - lastErr) * interval;
-		lastErr = err;
-		if(err > 0)
-		goBackward(err + minSpeed, err + minSpeed);
-		else goForward(-err + minSpeed, -err + minSpeed);
-		delayMicroseconds(dt);
-		current = left_encoder.read() + right_encoder.read();
+		int leftError = left_encoder.read()- initialLeft; // placeholder value for left rear led threshold
+		int rightError = right_encoder.read() - initialRight; // placeholder for right rear led threshold
+
+		if (leftError > tolerance) // too close from the wall
+		{
+			analogWrite(LEFT_BACKWARD, 150);
+			analogWrite(LEFT_FORWARD, 0);
+		}
+
+		else if (leftError < -tolerance) // too far
+		{
+			analogWrite(LEFT_FORWARD, 120);
+			analogWrite(LEFT_BACKWARD, 0);
+		}
+
+		else
+		{
+			analogWrite(LEFT_FORWARD, 0);
+			analogWrite(LEFT_BACKWARD, 0);
+		}
+
+		if (rightError > tolerance) // too close from the wall
+		{
+			analogWrite(RIGHT_BACKWARD, 150);
+			analogWrite(RIGHT_FORWARD, 0);
+		}
+
+		else if (rightError < -tolerance) // too far
+		{
+			analogWrite(RIGHT_FORWARD, 120);
+			analogWrite(RIGHT_BACKWARD, 0);
+		}
+
+		else
+		{
+			analogWrite(RIGHT_FORWARD, 0);
+			analogWrite(RIGHT_BACKWARD, 0);
+		}
+		delay(1);
 	}
 	goForward(0, 0);
-
+	/*
+	bt.println(printMap());
+	bt.println(printFloodFill());
+	bt.print(curLocation.x);
+	bt.print(" ");
+	bt.println(curLocation.y);
+	*/
+	delay(100);
 }
 
 void MovementClass::stop()
@@ -223,12 +256,13 @@ void MovementClass::curveTurn(const Turn &dir)
 
 void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT,RIGHT, BACK
 {
-	
 	resetEncoder();
-	int error = 0;
-	int tolerance = 30;
-	int turnSpeed = 230;
-	elapsedMillis timeLimit =0;
+	int errorL = 0;
+	int errorR = 0;
+	int tolerance = 20;
+	int turnSpeedL = 230;
+	int turnSpeedR = 230;
+	elapsedMillis timeLimit = 0;
 	unsigned int limit = 500;
 
 	while (timeLimit < limit)
@@ -236,27 +270,35 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 		switch (dir)
 		{
 		case LEFT:
-			error = -(QUARTER_TURN_DISTANCE - (right_encoder.read() - left_encoder.read()));
-			turnSpeed = absolute(error) / (1.0*QUARTER_TURN_DISTANCE) * 100 + 130;
+			errorL =  -(left_encoder.read() + (QUARTER_TURN_DISTANCE / 2.0));
+			errorR = (QUARTER_TURN_DISTANCE / 2.0) - right_encoder.read();
+			turnSpeedL = absolute(errorL) / (QUARTER_TURN_DISTANCE / 2.0) * 140 + 140;
+			turnSpeedR = absolute(errorR) / (QUARTER_TURN_DISTANCE / 2.0) * 140 + 140;
 			break;
 		case DIAGONAL_LEFT:
-			error = -(QUARTER_TURN_DISTANCE/2 - (right_encoder.read() - left_encoder.read()));
-			turnSpeed = absolute(error) / (0.5*QUARTER_TURN_DISTANCE) * 100 + 130;
-			limit = 350;
+			errorL = -(left_encoder.read() + (QUARTER_TURN_DISTANCE / 4.0));
+			errorR = (QUARTER_TURN_DISTANCE / 4.0) - right_encoder.read();
+			turnSpeedL = absolute(errorL) / (QUARTER_TURN_DISTANCE / 4.0) * 140 + 140;
+			turnSpeedR = absolute(errorR) / (QUARTER_TURN_DISTANCE / 4.0) * 140 + 140;
 			break;
 		case RIGHT:
-			error = (QUARTER_TURN_DISTANCE - (left_encoder.read() - right_encoder.read()));
-			turnSpeed = absolute(error) / (1.0*QUARTER_TURN_DISTANCE) * 100 + 130;
+			errorL = ((QUARTER_TURN_DISTANCE / 2.0) - left_encoder.read());
+			errorR = -((QUARTER_TURN_DISTANCE / 2.0) + right_encoder.read());
+			turnSpeedL = absolute(errorL) / (QUARTER_TURN_DISTANCE / 2.0) * 140 + 140;
+			turnSpeedR = absolute(errorR) / (QUARTER_TURN_DISTANCE / 2.0) * 140 + 140;
 			break;
 		case DIAGONAL_RIGHT:
-			error = (QUARTER_TURN_DISTANCE/2 - (left_encoder.read() - right_encoder.read()));
-			turnSpeed = absolute(error) / (0.5*QUARTER_TURN_DISTANCE) * 100 + 130;
-			limit = 350;
+			errorL = ((QUARTER_TURN_DISTANCE / 4.0) - left_encoder.read());
+			errorR = -((QUARTER_TURN_DISTANCE / 4.0) + right_encoder.read());
+			turnSpeedL = absolute(errorL) / (QUARTER_TURN_DISTANCE / 4.0) * 140 + 140;
+			turnSpeedR = absolute(errorR) / (QUARTER_TURN_DISTANCE / 4.0) * 140 + 140;
 			break;
 		case BACK:
 			limit = 1000;
-			error = (2 * QUARTER_TURN_DISTANCE - (left_encoder.read() - right_encoder.read()));
-			turnSpeed = absolute(error) / (2.0*QUARTER_TURN_DISTANCE) * 100 + 130;
+			errorL = -(left_encoder.read() + (QUARTER_TURN_DISTANCE*1.0072));
+			errorR = (QUARTER_TURN_DISTANCE*1.0072) - right_encoder.read();
+			turnSpeedL = absolute(errorL) / (QUARTER_TURN_DISTANCE *1.0) * 100 + 150;
+			turnSpeedR = absolute(errorR) / (QUARTER_TURN_DISTANCE*1.0) *  50 + 150;
 			break;
 		case NO_TURN:
 			break;
@@ -264,34 +306,45 @@ void MovementClass::turn_encoder(const Turn & dir)  // turn by encoder with LEFT
 			exit(1);
 		}
 
-
-		if (error > tolerance)                                   //positive turn right
+		if (errorL > tolerance)                                   //positive turn right
 		{
+			analogWrite(LEFT_FORWARD, turnSpeedL);
 			analogWrite(LEFT_BACKWARD, 0);
-			analogWrite(RIGHT_FORWARD, 0);
-			analogWrite(LEFT_FORWARD, turnSpeed);
-			analogWrite(RIGHT_BACKWARD, turnSpeed);
 		}
-
-		else if (error < -tolerance)							// negative turn left
+		else if (errorL < -tolerance)							// negative turn left
 		{
 			analogWrite(LEFT_FORWARD, 0);
-			analogWrite(RIGHT_BACKWARD, 0);
-			analogWrite(LEFT_BACKWARD, turnSpeed);
-			analogWrite(RIGHT_FORWARD, turnSpeed);
+			analogWrite(LEFT_BACKWARD, turnSpeedL);
 		}
 
 		else                                                   // brake
 		{
-			analogWrite(LEFT_FORWARD, 250);
-			analogWrite(RIGHT_BACKWARD, 250);
-			analogWrite(LEFT_BACKWARD, 250);
-			analogWrite(RIGHT_FORWARD, 250);
+			analogWrite(LEFT_FORWARD, 0);
+			analogWrite(LEFT_BACKWARD, 0);
+		}
+
+		if (errorR > tolerance)                                   //positive turn right
+		{
+			analogWrite(RIGHT_FORWARD, turnSpeedR);
+			analogWrite(RIGHT_BACKWARD, 0);
+		}
+		else if (errorR < -tolerance)							// negative turn left
+		{
+			analogWrite(RIGHT_FORWARD, 0);
+			analogWrite(RIGHT_BACKWARD, turnSpeedR);
+		}
+
+		else                                                   // brake
+		{
+			analogWrite(RIGHT_FORWARD, 0);
+			analogWrite(RIGHT_BACKWARD, 0);
 		}
 	}
-	goForward(0, 0); 
+	goForward(0, 0);
 	resetEncoder();
 }
+
+
 
 //MovementClass Movement;
 

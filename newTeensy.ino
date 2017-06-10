@@ -25,7 +25,7 @@ volatile bool modeLeft = false;
 volatile bool modeRight = false;
 
 const int ledTime = 10; //microsecond
-const int baseSpeed = 150;
+int baseSpeed = 175;
 
 LedClass led;
 MovementClass move(baseSpeed);
@@ -36,102 +36,78 @@ SoftwareSerial bluetooth(7, 8);
 void testLed();
 void testEncoder();
 void testMotor();
-void testAdjust()
-{
-	int tolerance = 500;
-	//analogReadResolution(11);
-	while (1)
-	{
-		led.measure(10);
-		int leftError = led.left_rear - led.forwardThresholdL; // placeholder value for left rear led threshold
-		int rightError = led.right_rear - led.forwardThresholdR; // placeholder for right rear led threshold
-
-		if (leftError > tolerance) // too close from the wall
-		{
-			analogWrite(LEFT_BACKWARD, 150);
-			analogWrite(LEFT_FORWARD, 0);
-		}
-
-		else if (leftError < -tolerance) // too far
-		{
-			analogWrite(LEFT_FORWARD, 120);
-			analogWrite(LEFT_BACKWARD, 0);
-		}
-
-		else
-		{
-			analogWrite(LEFT_FORWARD, 0);
-			analogWrite(LEFT_BACKWARD, 0);
-		}
-
-		if (rightError > tolerance) // too close from the wall
-		{
-			analogWrite(RIGHT_BACKWARD, 150);
-			analogWrite(RIGHT_FORWARD, 0);
-		}
-
-		else if (rightError < -tolerance) // too far
-		{
-			analogWrite(RIGHT_FORWARD, 120);
-			analogWrite(RIGHT_BACKWARD, 0);
-		}
-
-		else
-		{
-			analogWrite(RIGHT_FORWARD, 0);
-			analogWrite(RIGHT_BACKWARD, 0);
-		}
-
-
-
-		delay(3);
-	}
-}
 
 void setup()
 {
-	delay(6000);
 	bluetooth.begin(9600);
 	Serial.begin(9600);
-	led.init();
-	//move.turn_encoder(BACK);
+	/*
+	delay(2000);
+	delay(6000);
+	//delay(6000);
+	
+	led.init1();
+	move.turn_encoder(LEFT);
+	maze.stopAlign();
+	move.turn_encoder(LEFT);
 	move.resetEncoder();
-	//maze.floodFill(Coordinate(0,0));
-	led.measure(ledTime);
-	led.frontThreshold = 50000;
+	maze.floodFill(Coordinate(0,0));
+	led.init2();
+	delay(500);
 	control = 0;
 	time = 0;
-	
+	move.stop();
 	//move.goForward();
+	*/
 }
 
 void loop()
 {
-	//testMove();
+	//testMotor();
 	//testLed();
 	//testEncoder();
-	//testMotor();
+	//testMove();
 	//testStraight(ENCODER_MODE,'a');
 	//testSolving();
-	//testOneWay(LED_MODE);
+	//testOneWay(HYBRID_MODE);
 	//testRealMaze(LED_MODE);
-	testAdjust();
+	killerMouse();
 }
 
 void testMove()
 {
 	move.resetEncoder();
 	move.goForward();
+	delayMicroseconds(300);
+	int counter = 1;
 	while (true)
 	{
-		if (move.getDistanceTravel() > 18 * 5 + 1.1)
+		
+		if (move.getDistanceTravel() > 18.0* 15 - 0.15*15)
+		//if(led.left_rear + led.right_rear > 15500)//led.frontThreshold * 0.52)
 		{
-			move.stopForward();
+			int a = move.left_encoder.read();
+			int b = move.right_encoder.read();
+		    move.stopForward();
+			//maze.stopAlign();
+			bluetooth.println(maze.printMap());
+			//maze.stopAlign();
+			bluetooth.print(a);
+			bluetooth.print(" ");
+			bluetooth.println(b);
+			bluetooth.println(move.getDistanceTravel());
 			delay(10000);
 		}
+		else if (move.getDistanceTravel() > 18.0* counter - 6)
+		{
+			analogWrite(13, 1023);
+			++counter;
+			maze.updateMap();
+			analogWrite(13, 0);
+		}
 		led.measure(10);
-		pid.PID(LED_MODE);
-		delayMicroseconds(1000);
+		pid.PID(HYBRID_MODE);
+		delayMicroseconds(3000);
 	}
 }
 
@@ -179,107 +155,10 @@ void testSolving()
 
 void testOneWay(const PID_MODE &A)
 {
-
-	speed = 0;
-	float extraSpace = 0;
 	move.resetEncoder();
 	while (true)
 	{ 
-		//maze.randomMapping();
-		maze.mapping();
-		int check = maze.command(0);
-		if(check == -1) check=maze.command(true);
-		if (check == 2)
-		{
-			delay(300);
-			bluetooth.print(maze.curLocation.x);
-			bluetooth.print(" ");
-			bluetooth.println(maze.curLocation.y);
-			
-			bluetooth.println(maze.printFloodFill());
-			bluetooth.println(maze.printMap());
-			delay(300);
-		}
-	
-		//extraSpace = 2*speed;
-		//if (speed > 4000) speed = 4000;
-		led.measure(ledTime);
-		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.55 - extraSpace)
-		{
-			move.stopForward();
-			led.measure(ledTime);
-			/*
-			bluetooth.println("in this loop\n");
-			bluetooth.print(maze.curLocation.x);
-			bluetooth.print(" ");
-			bluetooth.println(maze.curLocation.y);
-			bluetooth.println(maze.printFloodFill());
-			bluetooth.println(maze.printMap());
-			*/
-			if (check == 0) check = maze.command(true);
-			//move.resetEncoder();
-			led.measure(ledTime);
-			//delay(1000);
-			//move.goForward();
-			//bluetooth.println(move.getDistanceTravel(), 3);
-			//bluetooth.println(maze.printMap());
-			//bluetooth.println(maze.printPath());
-			//bluetooth.println(maze.printFloodFill());
-			/*
-			//maze.simpleTravel();
-		if (false)//maze.command() && maze.curLocation == Coordinate(0,9))
-		{
-			move.stop();
-			bluetooth.print(maze.curLocation.x);
-			bluetooth.print(" ");
-			bluetooth.println(maze.curLocation.y);
-			bluetooth.print("  ");
-			bluetooth.print(maze.curDirection);
-			bluetooth.print("    ");
-			bluetooth.print(maze.nextLocation.x);
-			bluetooth.print(" ");
-			bluetooth.println(maze.nextLocation.y);
-			bluetooth.println(maze.printMap());
-			bluetooth.println(maze.printFloodFill());
-			bluetooth.println(maze.printPath());
-			move.resetEncoder();
-			bluetooth.println(move.getDistanceTravel(), 3);
-			delay(5000);
-			move.stop();
-			pid.turnFlag = true;
-			maze.counter = 1;
-			led.measure(ledTime);
-			pid.PID(A);
-			
-		}*/
-			/*
-			delay(2000);
-			pid.turnFlag = true;
-			maze.counter = 1;
-			led.measure(ledTime);
-			if (led.getLed(LEFT_DIAGONAL) < 0.5*led.leftThreshold)
-			{
-				move.turn_encoder(LEFT);
-				maze.curDirection = leftDir(maze.curDirection);
-			}
-			else if (led.getLed(RIGHT_DIAGONAL) < 0.5*led.rightThreshold)
-			{
-				move.turn_encoder(RIGHT);
-				maze.curDirection = rightDir(maze.curDirection);
-			}
-			else
-			{
-				move.turn_encoder(BACK);
-				maze.curDirection = opposite(maze.curDirection);
-			}
-			delay(200);
-			*/
-			//led.measure(ledTime);
-			//speed = 0;
-			//pid.PID(A);
-		}
-		
-		if (control > 1000)
+		if (control > 3000)
 		{
 			PIDFlag = true;
 			control = 0;
@@ -291,16 +170,64 @@ void testOneWay(const PID_MODE &A)
 			pid.PID(A);
 			PIDFlag = false;
 		}
+		
+		maze.mapping();
+		int check = maze.command(0);
+		if(check == -1) check=maze.command(true);
+		if (check == 7)
+		{
+			
+			delay(300);
+			bluetooth.print(maze.curLocation.x);
+			bluetooth.print(" ");
+			bluetooth.println(maze.curLocation.y);
+			
+			bluetooth.println(maze.printFloodFill());
+			bluetooth.println(maze.printMap());
+			delay(300);
+			check = maze.command(true);
+		}
+	
+		
+		led.measure(ledTime);
+		if (led.getLed(LEFT_REAR) + led.getLed(RIGHT_REAR) > led.frontThreshold*0.75 )
+		{
+			move.stopForward();
+			maze.stopAlign();
+			led.measure(ledTime);
+			/*
+			bluetooth.println("in this loop\n");
+			bluetooth.print(maze.curLocation.x);
+			bluetooth.print(" ");
+			bluetooth.println(maze.curLocation.y);
+			bluetooth.println(maze.printFloodFill());
+			bluetooth.println(maze.printMap());
+			*/
+			if (check == 0) check = maze.command(true);
+			led.measure(ledTime);
+
+				
+			//delay(1000);
+			//move.goForward();
+			//bluetooth.println(move.getDistanceTravel(), 3);
+			//bluetooth.println(maze.printMap());
+			//bluetooth.println(maze.printPath());
+			//bluetooth.println(maze.printFloodFill());
+			pid.PID(A);
+		}
+		analogWrite(13, 0);
 	}
-}
+	}
+	
 
 void testLed()
 {
+	move.goForward();
 	while (true)
 
 	{
 		led.measure(ledTime);
-		
+		/*
 		Serial.print("");
 		Serial.print(led.getLed(LEFT_REAR), DEC);
 		Serial.print("  ");
@@ -314,8 +241,8 @@ void testLed()
 		Serial.print("  ");
 		Serial.print(led.getLed(RIGHT_REAR), DEC);
 		Serial.println("\n");
+		*/
 		
-		/*
 		bluetooth.println("test");
 		bluetooth.print("");
 		bluetooth.print(led.getLed(LEFT_REAR));//, DEC);
@@ -331,7 +258,7 @@ void testLed()
 		bluetooth.print(led.getLed(RIGHT_REAR));//, DEC);
 		bluetooth.println("\n");
 		delay(100);
-		*/
+		
 
 		//bluetooth.println("test");;
 		
@@ -340,25 +267,29 @@ void testLed()
 
 void testMotor()
 {
+	move.resetEncoder();
 	while (true)
 	{
 		//move.goForward();
 		//printf("%d   %d\n", move.getCurrentSpeed(LEFT), move.getCurrentSpeed(RIGHT));
 
-		//delay(2000);
-		//move.turn_encoder(LEFT);
-
-		//delay(2000);
-		//move.turn_encoder(RIGHT);
-
-		//delay(2000);
-		//move.turn_encoder(BACK);
-
-		//delay(2000);
-		//move.turn_encoder(DIAGONAL_RIGHT);
+		delay(2000);
+		move.turn_encoder(LEFT);
 
 		delay(2000);
-		move.curveTurn(RIGHT);
+		move.turn_encoder(RIGHT);
+
+		delay(2000);
+		move.turn_encoder(BACK);
+
+		delay(2000);
+		move.turn_encoder(DIAGONAL_RIGHT);
+
+		delay(2000);
+		move.turn_encoder(DIAGONAL_LEFT);
+
+		//delay(2000);
+		//move.curveTurn(RIGHT);
 	}
 }
 
@@ -383,5 +314,80 @@ void testEncoder()
 			positionRight = newRight;
 		}
 
+	}
+}
+
+void killerMouse()
+{
+	char c;
+	if (bluetooth.available())
+	{
+		c = bluetooth.read();
+		switch (c)
+		{
+		case 'u':
+			move.baseSpeed = 350;
+			break;
+		case 'd':
+			move.baseSpeed = 450;
+			break;
+		case 'f':
+			control = 0;
+			move.goForward();
+			while (control< 1000000)
+			{
+				pid.PID(ENCODER_MODE);
+				delay(1);
+			}
+			break;
+		case 'q':
+			move.goBackward(150,150);
+			break;
+		case 's':
+			move.stopForward();
+			break;
+		case 'k':
+			move.baseSpeed = 900;
+			control = 0;
+			while (control< 1000000)
+			{
+				pid.PID(ENCODER_MODE);
+				delay(1);
+			}
+			move.baseSpeed = 175;
+			move.stopForward();
+			break;
+		case 'j':
+			for (int i = 0; i < 3; i++)
+			{
+				analogWrite(LEFT_FORWARD, 350);
+				analogWrite(LEFT_BACKWARD, 0);
+				analogWrite(RIGHT_FORWARD, 0);
+				analogWrite(RIGHT_BACKWARD, 350);
+				delay(200);
+				analogWrite(LEFT_FORWARD, 0);
+				analogWrite(LEFT_BACKWARD, 350);
+				analogWrite(RIGHT_FORWARD, 350);
+				analogWrite(RIGHT_BACKWARD, 0);
+				delay(200);
+			}
+			break;
+		case 'l':
+			analogWrite(LEFT_FORWARD, 0);
+			analogWrite(LEFT_BACKWARD, 140);
+			analogWrite(RIGHT_FORWARD, 140);
+			analogWrite(RIGHT_BACKWARD, 0);
+			break;
+		case 'r':
+			analogWrite(LEFT_FORWARD, 140);
+			analogWrite(LEFT_BACKWARD, 0);
+			analogWrite(RIGHT_FORWARD, 0);
+			analogWrite(RIGHT_BACKWARD, 140);
+			break;
+		case 'b':
+			move.turn_encoder(BACK);
+			break;
+
+		}
 	}
 }
